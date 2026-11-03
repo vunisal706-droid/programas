@@ -3,7 +3,7 @@
 // Nombres completos («Apellidos, Nombre»): solo en este dispositivo (programas-nombres-apertura-<srv>)
 'use strict';
 const SRV = { comedor: { n: 'Comedor', e: '🍽️' }, matinal: { n: 'Aula matinal', e: '☀️' } };
-let gridX = 0, modoApt = 'dia', srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
+let gridX = 0, gridY = 0, modoApt = 'dia', srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
 PERFILES.sandra.apertura = true;
 // Plan de Apertura como opción más en la pantalla de entrada
 PROG.APT = { n: 'Plan de Apertura', cls: 'APT', e: '🏫' }; PROG_DESC.APT = 'Usos del comedor y del aula matinal';
@@ -69,16 +69,16 @@ function rAptGrid(TODOS) {
   let h = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>🗓️ Mes:</b>' + sel + '</div>';
   if (!A.length) return h + '<div class="aviso">No hay alumnado en ' + SRV[srvSel].n.toLowerCase() + ' este mes.</div>';
   if (!F.length) return h + '<div class="aviso">Este mes no hay días lectivos.</div>';
-  h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a (cada día es un uso del servicio). Toca el número de un día para marcarlo o quitarlo a todos; «Todo» marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
-  setTimeout(() => { const g = $('gridApt'); if (g) g.scrollLeft = gridX; }, 0);
-  h += '<div class="tabla" id="gridApt" onscroll="gridX=this.scrollLeft"><table style="font-size:.85rem"><tr><th style="position:sticky;left:0;background:#fff;z-index:1">Alumno/a</th><th></th>' +
-    F.map(f => '<th class="c"><button type="button" class="chip" data-apt="col" data-v="' + f + '" style="padding:2px 7px" title="' + esc(fechaCorta(f)) + '">' + +f.slice(8) + '</button><br><small class="muted">' + 'DLMXJVS'[new Date(f + 'T12:00').getDay()] + '</small></th>').join('') + '<th>Usos</th></tr>' +
+  h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a (cada día es un uso del servicio). Toca el número de un día para marcarlo o quitarlo a todos; «Todo» (al final de cada fila) marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
+  setTimeout(() => { const g = $('gridApt'); if (g) { g.scrollLeft = gridX; g.scrollTop = gridY; } }, 0);
+  h += '<style>#gridApt{max-height:72vh;overflow:auto;border:1px solid var(--border);border-radius:12px}#gridApt th{position:sticky;top:0;background:#eef3fb;z-index:2;box-shadow:0 1px 0 var(--border)}#gridApt th:first-child{left:0;z-index:3}#gridApt tr:nth-child(even) td{background:#f7f9fd}#gridApt td:first-child{background:#fff}</style>' +
+    '<div class="tabla" id="gridApt" onscroll="gridX=this.scrollLeft;gridY=this.scrollTop"><table style="font-size:.85rem"><tr><th>Alumno/a</th>' +
+    F.map(f => '<th class="c"><button type="button" class="chip" data-apt="col" data-v="' + f + '" style="padding:2px 7px" title="' + esc(fechaCorta(f)) + '">' + +f.slice(8) + '</button><br><small class="muted">' + 'DLMXJVS'[new Date(f + 'T12:00').getDay()] + '</small></th>').join('') + '<th>Usos</th><th></th></tr>' +
     A.map(([aid, a, nm]) => {
       const vale = f => activo(a, f), n = F.filter(f => (dias[f] || {})[aid]).length;
-      return '<tr><td style="white-space:nowrap;position:sticky;left:0;background:#fff;z-index:1"><b>' + esc(nomVer(a, nm)) + '</b>' + (a.baja ? ' <small class="muted">baja ' + +a.baja.slice(8) + '/' + +a.baja.slice(5, 7) + '</small>' : '') + '</td>' +
-        '<td><button type="button" class="btn sec peq" data-apt="fila" data-v="' + aid + '">Todo</button></td>' +
-        F.map(f => '<td class="c"><input type="checkbox" data-aptc="' + aid + '|' + f + '"' + ((dias[f] || {})[aid] ? ' checked' : '') + (vale(f) ? '' : ' disabled') + ' style="width:20px;height:20px"></td>').join('') +
-        '<td class="c"><b>' + n + '</b></td></tr>';
+      return '<tr><td style="position:sticky;left:0;z-index:1;min-width:120px;max-width:150px;font-size:.8rem;line-height:1.2"><b>' + esc(nomVer(a, nm)) + '</b>' + (a.baja ? ' <small class="muted">baja ' + +a.baja.slice(8) + '/' + +a.baja.slice(5, 7) + '</small>' : '') + '</td>' +
+        F.map(f => '<td class="c" title="' + esc(fechaCorta(f)) + '"><input type="checkbox" data-aptc="' + aid + '|' + f + '"' + ((dias[f] || {})[aid] ? ' checked' : '') + (vale(f) ? '' : ' disabled') + ' style="width:20px;height:20px"></td>').join('') +
+        '<td class="c"><b>' + n + '</b></td><td><button type="button" class="btn sec peq" data-apt="fila" data-v="' + aid + '">Todo</button></td></tr>';
     }).join('') + '</table></div>';
   return h;
 }
