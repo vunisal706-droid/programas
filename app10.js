@@ -11,6 +11,7 @@ const AKEY = s => 'programas-nombres-apertura-' + s;
 const nomsApt = s => { try { return JSON.parse(localStorage.getItem(AKEY(s)) || '{}'); } catch (e) { return {}; } };
 const aptDe = s => ((D.apertura || {})[s]) || {};
 const aluApt = s => Object.entries(aptDe(s).alumnos || {}).map(([aid, a]) => [aid, a, nomsApt(s)[aid] || '']).sort((x, y) => (x[2] || x[1].siglas || '').localeCompare(y[2] || y[1].siglas || '', 'es'));
+const activo = (a, f) => !a.baja || f < a.baja;   // de baja desde esa fecha: deja de salir en la lista
 const nomVer = (a, n) => n ? n.split(',').reverse().map(x => x.trim()).join(' ') : a.siglas;
 // Días de servicio: lunes a viernes con cole
 const diaServicio = f => { cargarCalCole(); const w = new Date(f + 'T12:00').getDay(); return w > 0 && w < 6 && !sinCole(f); };
@@ -19,7 +20,7 @@ const mesesCurso = () => { const y = startY(CURSO), r = []; for (let m = 9; m <=
 
 RENDER.apertura = function () {
   if (!puedeApt()) return '<div class="card"><p>No tienes acceso a esta sección.</p></div>';
-  const A = aluApt(srvSel), dia = (aptDe(srvSel).dias || {})[fechaApt] || {}, pasado = !!dia._ok;
+  const TODOS = aluApt(srvSel), A = TODOS.filter(([, a]) => activo(a, fechaApt)), ACT = TODOS.filter(([, a]) => !a.baja), BAJ = TODOS.filter(([, a]) => a.baja), dia = (aptDe(srvSel).dias || {})[fechaApt] || {}, pasado = !!dia._ok;
   let h = '<div class="card" style="border-left:5px solid #e08a1e"><div class="card-h"><h2>🏫 Plan de Apertura</h2></div>' +
     '<div class="chips">' + Object.entries(SRV).map(([k, s]) => '<button class="chip' + (k === srvSel ? ' on' : '') + '" data-apt="srv" data-v="' + k + '" style="font-size:.95rem;padding:9px 16px">' + s.e + ' ' + s.n + '</button>').join('') + '</div>';
   // ── Pasar lista del día ──
@@ -40,13 +41,15 @@ RENDER.apertura = function () {
   }
   h += '</div>';
   // ── Resumen del mes para Séneca ──
-  if (A.length) h += rAptMes(A);
+  const AM = TODOS.filter(([, a]) => !a.baja || a.baja > mesApt + '-01');
+  if (AM.length) h += rAptMes(AM);
   // ── Alumnado ──
-  h += '<div class="card"><div class="card-h"><h2>👧 Alumnado de ' + esc(SRV[srvSel].n.toLowerCase()) + ' (' + A.length + ')</h2></div>';
+  h += '<div class="card"><div class="card-h"><h2>👧 Alumnado de ' + esc(SRV[srvSel].n.toLowerCase()) + ' (' + ACT.length + ')</h2></div>';
   if (!esMon()) h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><button class="btn" data-apt="pegar">📋 Pegar lista de Séneca</button><button class="btn sec" data-apt="nuevo">➕ Añadir a mano</button></div>';
   h += '<p class="small muted">En la nube solo van las siglas; los nombres completos se quedan en este dispositivo. Para tenerlos en otro móvil (el de Sandra): «Copia de nombres» aquí y «Cargar nombres» allí.</p>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0"><button class="btn sec peq" data-apt="exp">💾 Copia de nombres</button><button class="btn sec peq" data-apt="imp">📂 Cargar nombres</button></div>';
-  if (A.length && !esMon()) h += '<div class="tabla"><table><tr><th>Alumno/a</th><th>Siglas</th><th>Curso</th><th></th></tr>' + A.map(([aid, a, nm]) => '<tr><td>' + esc(nm || '—') + '</td><td>' + esc(a.siglas) + '</td><td>' + esc(a.curso || '') + '</td><td><button class="btn sec peq" data-apt="borrar" data-v="' + aid + '">🗑️ Dar de baja</button></td></tr>').join('') + '</table></div>';
+  if (ACT.length && !esMon()) h += '<div class="tabla"><table><tr><th>Alumno/a</th><th>Siglas</th><th>Curso</th><th></th></tr>' + ACT.map(([aid, a, nm]) => '<tr><td>' + esc(nm || '—') + '</td><td>' + esc(a.siglas) + '</td><td>' + esc(a.curso || '') + '</td><td><button class="btn sec peq" data-apt="baja" data-v="' + aid + '">🚪 Dar de baja</button></td></tr>').join('') + '</table></div>';
+  if (BAJ.length && !esMon()) h += '<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">🚪 Dados de baja (' + BAJ.length + ')</summary><p class="small muted" style="margin:6px 0">Ya no salen al pasar lista. Sus días de antes de la baja se mantienen para Séneca.</p><div class="tabla"><table><tr><th>Alumno/a</th><th>Baja desde</th><th></th></tr>' + BAJ.map(([aid, a, nm]) => '<tr><td>' + esc(nm || a.siglas) + '</td><td>' + esc(fechaCorta(a.baja)) + '</td><td style="white-space:nowrap"><button class="btn sec peq" data-apt="alta" data-v="' + aid + '">↩️ Volver a dar de alta</button> <button class="btn sec peq" data-apt="borrar" data-v="' + aid + '">🗑️ Borrar del todo</button></td></tr>').join('') + '</table></div></details>';
   return h + '</div>';
 };
 
@@ -130,7 +133,10 @@ document.addEventListener('click', e => {
     case 'nuevo': dlgNuevoApt(); break;
     case 'exp': exportarNombres(); break;
     case 'imp': importarNombres(); break;
-    case 'borrar': if (confirm('¿Dar de baja a este alumno/a del servicio? Se borran también sus usos guardados.')) {
+    case 'baja': { const f = prompt('¿Desde qué día deja el servicio? (ya no saldrá al pasar lista)', hoyIso()); if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f.trim())) { if (f) toast('Escribe la fecha así: ' + hoyIso(), 'err'); break; }
+      guardar('apertura/' + srvSel + '/alumnos/' + v + '/baja', f.trim()); toast('Dado/a de baja'); render(); break; }
+    case 'alta': guardar('apertura/' + srvSel + '/alumnos/' + v + '/baja', null); toast('De nuevo en la lista'); render(); break;
+    case 'borrar': if (confirm('¿Borrar del todo a este alumno/a? Se pierden también sus días guardados (también los de meses pasados).')) {
       guardar('apertura/' + srvSel + '/alumnos/' + v, null);
       Object.entries(aptDe(srvSel).dias || {}).forEach(([f, d]) => { if (d[v]) guardar('apertura/' + srvSel + '/dias/' + f + '/' + v, null); });
       const N = nomsApt(srvSel); delete N[v]; try { localStorage.setItem(AKEY(srvSel), JSON.stringify(N)); } catch (x) { } render();
