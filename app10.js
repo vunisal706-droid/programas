@@ -3,7 +3,7 @@
 // Nombres completos («Apellidos, Nombre»): solo en este dispositivo (programas-nombres-apertura-<srv>)
 'use strict';
 const SRV = { comedor: { n: 'Comedor', e: '🍽️' }, matinal: { n: 'Aula matinal', e: '☀️' } };
-let srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
+let gridX = 0, modoApt = 'dia', srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
 PERFILES.sandra.apertura = true;   // Sandra pasa lista del comedor y del aula matinal
 const puedeApt = () => !esMon() || !!(PERFILES[PERFIL] || {}).apertura;
 
@@ -23,6 +23,8 @@ RENDER.apertura = function () {
   const TODOS = aluApt(srvSel), A = TODOS.filter(([, a]) => activo(a, fechaApt)), ACT = TODOS.filter(([, a]) => !a.baja), BAJ = TODOS.filter(([, a]) => a.baja), dia = (aptDe(srvSel).dias || {})[fechaApt] || {}, pasado = !!dia._ok;
   let h = '<div class="card" style="border-left:5px solid #e08a1e"><div class="card-h"><h2>🏫 Plan de Apertura</h2></div>' +
     '<div class="chips">' + Object.entries(SRV).map(([k, s]) => '<button class="chip' + (k === srvSel ? ' on' : '') + '" data-apt="srv" data-v="' + k + '" style="font-size:.95rem;padding:9px 16px">' + s.e + ' ' + s.n + '</button>').join('') + '</div>';
+  h += '<div class="chips">' + [['dia', '📅 Por día'], ['mes', '🗓️ Por mes completo']].map(([k, t]) => '<button class="chip' + (k === modoApt ? ' on' : '') + '" data-apt="modo" data-v="' + k + '">' + t + '</button>').join('') + '</div>';
+  if (modoApt === 'mes') { h += rAptGrid(TODOS) + '</div>'; } else {
   // ── Pasar lista del día ──
   h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>📅 Día:</b><input type="date" id="fechaApt" value="' + fechaApt + '" style="width:auto">' +
     (fechaApt !== hoyIso() ? '<button class="btn sec peq" data-apt="hoy">Hoy</button>' : '') + '</div>';
@@ -40,6 +42,7 @@ RENDER.apertura = function () {
       }).join('') + '</div>';
   }
   h += '</div>';
+  }
   // ── Resumen del mes para Séneca ──
   const AM = TODOS.filter(([, a]) => !a.baja || a.baja > mesApt + '-01');
   if (AM.length) h += rAptMes(AM);
@@ -52,6 +55,34 @@ RENDER.apertura = function () {
   if (BAJ.length && !esMon()) h += '<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">🚪 Dados de baja (' + BAJ.length + ')</summary><p class="small muted" style="margin:6px 0">Ya no salen al pasar lista. Sus días de antes de la baja se mantienen para Séneca.</p><div class="tabla"><table><tr><th>Alumno/a</th><th>Baja desde</th><th></th></tr>' + BAJ.map(([aid, a, nm]) => '<tr><td>' + esc(nm || a.siglas) + '</td><td>' + esc(fechaCorta(a.baja)) + '</td><td style="white-space:nowrap"><button class="btn sec peq" data-apt="alta" data-v="' + aid + '">↩️ Volver a dar de alta</button> <button class="btn sec peq" data-apt="borrar" data-v="' + aid + '">🗑️ Borrar del todo</button></td></tr>').join('') + '</table></div></details>';
   return h + '</div>';
 };
+
+// ── Pasar lista por mes completo: una fila por alumno/a y una casilla por día lectivo ──
+function rAptGrid(TODOS) {
+  const mes = mesApt, F = diasMesApt(mes), dias = aptDe(srvSel).dias || {};
+  const A = TODOS.filter(([, a]) => !a.baja || a.baja > mes + '-01');
+  const sel = '<select id="mesApt" style="width:auto">' + mesesCurso().map(m => '<option value="' + m + '"' + (m === mes ? ' selected' : '') + '>' + MESES[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>').join('') + '</select>';
+  let h = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>🗓️ Mes:</b>' + sel + '</div>';
+  if (!A.length) return h + '<div class="aviso">No hay alumnado en ' + SRV[srvSel].n.toLowerCase() + ' este mes.</div>';
+  if (!F.length) return h + '<div class="aviso">Este mes no hay días lectivos.</div>';
+  h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a. Toca el número de un día para marcarlo o quitarlo a todos; «Todo» marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
+  setTimeout(() => { const g = $('gridApt'); if (g) g.scrollLeft = gridX; }, 0);
+  h += '<div class="tabla" id="gridApt" onscroll="gridX=this.scrollLeft"><table style="font-size:.85rem"><tr><th style="position:sticky;left:0;background:#fff;z-index:1">Alumno/a</th><th></th>' +
+    F.map(f => '<th class="c"><button type="button" class="chip" data-apt="col" data-v="' + f + '" style="padding:2px 7px" title="' + esc(fechaCorta(f)) + '">' + +f.slice(8) + '</button><br><small class="muted">' + 'DLMXJVS'[new Date(f + 'T12:00').getDay()] + '</small></th>').join('') + '<th>Usos</th></tr>' +
+    A.map(([aid, a, nm]) => {
+      const vale = f => activo(a, f), n = F.filter(f => (dias[f] || {})[aid]).length;
+      return '<tr><td style="white-space:nowrap;position:sticky;left:0;background:#fff;z-index:1"><b>' + esc(nomVer(a, nm)) + '</b>' + (a.baja ? ' <small class="muted">baja ' + +a.baja.slice(8) + '/' + +a.baja.slice(5, 7) + '</small>' : '') + '</td>' +
+        '<td><button type="button" class="btn sec peq" data-apt="fila" data-v="' + aid + '">Todo</button></td>' +
+        F.map(f => '<td class="c"><input type="checkbox" data-aptc="' + aid + '|' + f + '"' + ((dias[f] || {})[aid] ? ' checked' : '') + (vale(f) ? '' : ' disabled') + ' style="width:20px;height:20px"></td>').join('') +
+        '<td class="c"><b>' + n + '</b></td></tr>';
+    }).join('') + '</table></div>';
+  return h;
+}
+function marcarMes(cambios) {   // cambios: [[fecha, aid, bool], …]
+  const D2 = aptDe(srvSel).dias || {}, porDia = {};
+  cambios.forEach(([f, aid, v]) => { (porDia[f] = porDia[f] || Object.assign({}, D2[f] || {}))[aid] = v; });
+  Object.entries(porDia).forEach(([f, d]) => { d._ok = true; Object.keys(d).forEach(k => { if (!d[k]) delete d[k]; }); guardar('apertura/' + srvSel + '/dias/' + f, d); });
+  render();
+}
 
 function rAptMes(A) {
   const dias = aptDe(srvSel).dias || {}, mes = mesApt, previstos = diasMesApt(mes).filter(f => f <= hoyIso());
@@ -125,6 +156,9 @@ document.addEventListener('click', e => {
   const v = b.dataset.v, A = aluApt(srvSel);
   switch (b.dataset.apt) {
     case 'srv': srvSel = v; render(); break;
+    case 'modo': modoApt = v; render(); break;
+    case 'col': { const T = aluApt(srvSel).filter(([, a]) => activo(a, v)), d = (aptDe(srvSel).dias || {})[v] || {}, on = !T.every(([aid]) => d[aid]); marcarMes(T.map(([aid]) => [v, aid, on])); break; }
+    case 'fila': { const al = aluApt(srvSel).find(([x]) => x === v); if (!al) break; const F = diasMesApt(mesApt).filter(f => activo(al[1], f) && f <= hoyIso()), dd = aptDe(srvSel).dias || {}, on = !F.every(f => (dd[f] || {})[v]); marcarMes(F.map(f => [f, v, on])); break; }
     case 'hoy': fechaApt = hoyIso(); render(); break;
     case 'toca': { const dia = (aptDe(srvSel).dias || {})[fechaApt] || {}; guardarDia({ [v]: !dia[v] }); break; }
     case 'todos': { const c = {}; A.forEach(([aid]) => c[aid] = true); guardarDia(c); toast('Han venido todos'); break; }
@@ -144,6 +178,7 @@ document.addEventListener('click', e => {
   }
 });
 document.addEventListener('change', e => {
+  if (e.target.dataset && e.target.dataset.aptc) { const [aid, f] = e.target.dataset.aptc.split('|'); marcarMes([[f, aid, e.target.checked]]); return; }
   if (e.target.id === 'fechaApt' && e.target.value) { fechaApt = e.target.value; render(); }
   if (e.target.id === 'mesApt') { mesApt = e.target.value; render(); }
 });
