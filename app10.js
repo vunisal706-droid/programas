@@ -48,7 +48,7 @@ RENDER.apertura = function () {
   h += '</div>';
   }
   // ── Resumen del mes para Séneca ──
-  const AM = TODOS.filter(([, a]) => !a.baja || a.baja > mesApt + '-01');
+  const dd = aptDe(srvSel).dias || {}, AM = TODOS.filter(([aid, a]) => !a.baja || Object.keys(dd).some(f => f.startsWith(mesApt) && dd[f][aid]));
   if (AM.length) h += rAptMes(AM);
   // ── Alumnado ──
   h += '<div class="card"><div class="card-h"><h2>👧 Alumnado de ' + esc(SRV[srvSel].n.toLowerCase()) + ' (' + ACT.length + ')</h2></div>';
@@ -63,7 +63,7 @@ RENDER.apertura = function () {
 // ── Pasar lista por mes completo: una fila por alumno/a y una casilla por día lectivo ──
 function rAptGrid(TODOS) {
   const mes = mesApt, F = diasMesApt(mes), dias = aptDe(srvSel).dias || {};
-  const A = TODOS.filter(([, a]) => !a.baja || a.baja > mes + '-01');
+  const A = TODOS.filter(([, a]) => !a.baja);
   const sel = '<select id="mesApt" style="width:auto">' + mesesCurso().map(m => '<option value="' + m + '"' + (m === mes ? ' selected' : '') + '>' + MESES[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>').join('') + '</select>';
   let h = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>🗓️ Mes:</b>' + sel + '</div>';
   if (!A.length) return h + '<div class="aviso">No hay alumnado en ' + SRV[srvSel].n.toLowerCase() + ' este mes.</div>';
@@ -95,6 +95,7 @@ function rAptMes(A) {
   const usos = aid => pasados.filter(f => dias[f][aid]).map(f => +f.slice(8));
   const sel = '<select id="mesApt" style="width:auto">' + mesesCurso().map(m => '<option value="' + m + '"' + (m === mes ? ' selected' : '') + '>' + MESES[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>').join('') + '</select>';
   let h = '<div class="card" style="border-left:5px solid var(--ok)"><div class="card-h"><h2>🟢 Para grabar en Séneca · ' + esc(SRV[srvSel].n) + '</h2>' + sel + '</div>';
+  h = h.replace('</h2>' + sel, '</h2><span style="display:flex;gap:8px;flex-wrap:wrap">' + sel + '<button class="btn sec" data-apt="pdf">📄 PDF del mes</button></span>');
   h += '<p class="small">Días registrados: <b>' + (fmtSen(pasados.map(f => +f.slice(8))) || '—') + '</b>' + (sinPasar.length ? ' · <span style="color:var(--bad)">sin pasar: ' + fmtSen(sinPasar.map(f => +f.slice(8))) + '</span>' : '') + '</p>';
   if (!pasados.length) return h + '<p class="small muted">Este mes todavía no hay usos registrados.</p></div>';
   const todos = fmtSen(pasados.map(f => +f.slice(8))), iguales = A.every(([aid]) => fmtSen(usos(aid)) === todos);
@@ -111,6 +112,19 @@ function rAptMes(A) {
   return h + '</div>';
 }
 
+function pdfUsos() {
+  const dd = aptDe(srvSel).dias || {}, mes = mesApt, mesN = MESES[+mes.slice(5) - 1] + ' de ' + mes.slice(0, 4);
+  const F = Object.keys(dd).filter(f => f.startsWith(mes) && dd[f]._ok).sort();
+  const A = aluApt(srvSel).filter(([aid, a]) => !a.baja || F.some(f => dd[f][aid]));
+  const us = aid => F.filter(f => dd[f][aid]).map(f => +f.slice(8));
+  let tot = 0;
+  const filas = A.map(([aid, a, nm], i) => { const u = us(aid); tot += u.length; return [String(i + 1), esc(nm || a.siglas), esc(a.curso || ''), u.length ? fmtSen(u).replace(/,/g, ', ') : '—', '<b>' + u.length + '</b>']; });
+  const cuerpo = '<p><b>Servicio:</b> ' + esc(SRV[srvSel].n) + ' &nbsp;·&nbsp; <b>Mes:</b> ' + esc(mesN) + ' &nbsp;·&nbsp; <b>Días de servicio registrados:</b> ' + F.length + '</p>' +
+    tabla(['N.º', 'Alumno/a', 'Curso', 'Días que asistió', 'Usos'], filas) +
+    '<p style="margin-top:10px"><b>Total de usos del mes:</b> ' + tot + ' · <b>Alumnado:</b> ' + A.length + '</p>' +
+    '<p style="margin-top:30px;text-align:right">En Santa Fe, a</p><p style="margin-top:50px;text-align:right">Fdo.: Víctor Manuel Única Salas<br>Director</p>';
+  abrirDoc('Usos del servicio de ' + SRV[srvSel].n.toLowerCase() + ' · ' + mesN, cuerpo, 'APT');
+}
 function guardarDia(cambios) {
   const base = 'apertura/' + srvSel + '/dias/' + fechaApt, dia = Object.assign({}, (aptDe(srvSel).dias || {})[fechaApt] || {}, cambios, { _ok: true });
   Object.keys(dia).forEach(k => { if (!dia[k]) delete dia[k]; });
@@ -160,6 +174,7 @@ document.addEventListener('click', e => {
   const v = b.dataset.v, A = aluApt(srvSel);
   switch (b.dataset.apt) {
     case 'srv': srvSel = v; render(); break;
+    case 'pdf': pdfUsos(); break;
     case 'modo': modoApt = v; render(); break;
     case 'col': { const T = aluApt(srvSel).filter(([, a]) => activo(a, v)), d = (aptDe(srvSel).dias || {})[v] || {}, on = !T.every(([aid]) => d[aid]); marcarMes(T.map(([aid]) => [v, aid, on])); break; }
     case 'fila': { const al = aluApt(srvSel).find(([x]) => x === v); if (!al) break; const F = diasMesApt(mesApt).filter(f => activo(al[1], f) && f <= hoyIso()), dd = aptDe(srvSel).dias || {}, on = !F.every(f => (dd[f] || {})[v]); marcarMes(F.map(f => [f, v, on])); break; }
