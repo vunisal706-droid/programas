@@ -4,7 +4,11 @@
 'use strict';
 const SRV = { comedor: { n: 'Comedor', e: '🍽️' }, matinal: { n: 'Aula matinal', e: '☀️' } };
 let gridX = 0, modoApt = 'dia', srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
-PERFILES.sandra.apertura = true;   // Sandra pasa lista del comedor y del aula matinal
+PERFILES.sandra.apertura = true;
+// Plan de Apertura como opción más en la pantalla de entrada
+PROG.APT = { n: 'Plan de Apertura', cls: 'APT', e: '🏫' }; PROG_DESC.APT = 'Usos del comedor y del aula matinal';
+['victor', 'maria', 'encarna', 'sandra'].forEach(k => PERFILES[k].prog.push('APT'));
+pintarPerfiles();   // Sandra pasa lista del comedor y del aula matinal
 const puedeApt = () => !esMon() || !!(PERFILES[PERFIL] || {}).apertura;
 
 const AKEY = s => 'programas-nombres-apertura-' + s;
@@ -32,7 +36,7 @@ RENDER.apertura = function () {
   if (!A.length) h += '<div class="aviso">Todavía no hay alumnado en ' + SRV[srvSel].n.toLowerCase() + '.' + (esMon() ? ' Avisa a Víctor.' : ' Pégalo abajo desde la lista de Séneca.') + '</div>';
   else {
     const n = A.filter(([aid]) => dia[aid]).length;
-    h += '<p class="small" style="margin-bottom:8px">' + (pasado ? '✔ Lista pasada: <b>' + n + '</b> de ' + A.length + ' han venido.' : '<span class="muted">Sin pasar todavía.</span>') + ' Toca a cada alumno/a para marcar si ha venido.</p>' +
+    h += '<p class="small" style="margin-bottom:8px">' + (pasado ? '✔ Registrado: <b>' + n + '</b> de ' + A.length + ' han venido.' : '<span class="muted">Sin registrar todavía.</span>') + ' Marca a quien ha venido hoy: cada día que viene es un uso del servicio.</p>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><button class="btn" data-apt="todos" style="font-size:1rem;padding:12px 16px">✅ Han venido todos</button>' +
       '<button class="btn sec" data-apt="ninguno">Quitar a todos</button></div>' +
       '<div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">' + A.map(([aid, a, nm]) => {
@@ -64,7 +68,7 @@ function rAptGrid(TODOS) {
   let h = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>🗓️ Mes:</b>' + sel + '</div>';
   if (!A.length) return h + '<div class="aviso">No hay alumnado en ' + SRV[srvSel].n.toLowerCase() + ' este mes.</div>';
   if (!F.length) return h + '<div class="aviso">Este mes no hay días lectivos.</div>';
-  h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a. Toca el número de un día para marcarlo o quitarlo a todos; «Todo» marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
+  h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a (cada día es un uso del servicio). Toca el número de un día para marcarlo o quitarlo a todos; «Todo» marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
   setTimeout(() => { const g = $('gridApt'); if (g) g.scrollLeft = gridX; }, 0);
   h += '<div class="tabla" id="gridApt" onscroll="gridX=this.scrollLeft"><table style="font-size:.85rem"><tr><th style="position:sticky;left:0;background:#fff;z-index:1">Alumno/a</th><th></th>' +
     F.map(f => '<th class="c"><button type="button" class="chip" data-apt="col" data-v="' + f + '" style="padding:2px 7px" title="' + esc(fechaCorta(f)) + '">' + +f.slice(8) + '</button><br><small class="muted">' + 'DLMXJVS'[new Date(f + 'T12:00').getDay()] + '</small></th>').join('') + '<th>Usos</th></tr>' +
@@ -91,12 +95,12 @@ function rAptMes(A) {
   const usos = aid => pasados.filter(f => dias[f][aid]).map(f => +f.slice(8));
   const sel = '<select id="mesApt" style="width:auto">' + mesesCurso().map(m => '<option value="' + m + '"' + (m === mes ? ' selected' : '') + '>' + MESES[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>').join('') + '</select>';
   let h = '<div class="card" style="border-left:5px solid var(--ok)"><div class="card-h"><h2>🟢 Para grabar en Séneca · ' + esc(SRV[srvSel].n) + '</h2>' + sel + '</div>';
-  h += '<p class="small">Días con lista pasada: <b>' + (fmtSen(pasados.map(f => +f.slice(8))) || '—') + '</b>' + (sinPasar.length ? ' · <span style="color:var(--bad)">sin pasar: ' + fmtSen(sinPasar.map(f => +f.slice(8))) + '</span>' : '') + '</p>';
-  if (!pasados.length) return h + '<p class="small muted">Este mes todavía no se ha pasado lista.</p></div>';
+  h += '<p class="small">Días registrados: <b>' + (fmtSen(pasados.map(f => +f.slice(8))) || '—') + '</b>' + (sinPasar.length ? ' · <span style="color:var(--bad)">sin pasar: ' + fmtSen(sinPasar.map(f => +f.slice(8))) + '</span>' : '') + '</p>';
+  if (!pasados.length) return h + '<p class="small muted">Este mes todavía no hay usos registrados.</p></div>';
   const todos = fmtSen(pasados.map(f => +f.slice(8))), iguales = A.every(([aid]) => fmtSen(usos(aid)) === todos);
   if (!esMon()) h += iguales ? '<div class="aviso verde">Todos vinieron todos los días: en «Usos del servicio» pega <b>' + todos + '</b> y pulsa «Aplicar a todos/as los/as alumnos/as de esta página».</div>'
     : '<div class="aviso">Hay alumnos/as que faltaron algún día: usa «Copiar alumnado» y el favorito, o pega a cada uno su línea.</div>';
-  h += '<div class="tabla"><table><tr><th>Alumno/a</th><th>Días (formato Séneca)</th><th>Usos</th><th></th></tr>' + A.map(([aid, a, nm]) => {
+  h += '<div class="tabla"><table><tr><th>Alumno/a</th><th>Días que vino (formato Séneca)</th><th>N.º de usos</th><th></th></tr>' + A.map(([aid, a, nm]) => {
     const t = fmtSen(usos(aid));
     return '<tr><td>' + esc(nm || a.siglas) + '</td><td><b style="letter-spacing:.5px">' + (t || '<span class="muted">ninguno</span>') + '</b></td><td class="c">' + usos(aid).length + '</td><td>' + (t && !esMon() ? '<button class="btn sec peq" data-copiar9="' + t + '">📋 Copiar</button>' : '') + '</td></tr>';
   }).join('') + '</table></div>';
@@ -193,4 +197,7 @@ conectarMon = function () {
 };
 // Pestaña visible para Sandra
 const _abrir10 = abrir;
-abrir = function (p) { _abrir10(p); document.body.classList.toggle('apt', !!(PERFILES[p] || {}).apertura); };
+abrir = function (p) {
+  _abrir10(p); document.body.classList.toggle('apt', !!(PERFILES[p] || {}).apertura);
+  if (progAcc === 'APT' && puedeApt()) { if (esMon()) $('tituloApp').innerHTML = 'Plan de Apertura<small>Usos del servicio · ' + esc(PERFILES[p].nombre) + '</small>'; irA('apertura'); }
+};
