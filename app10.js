@@ -14,9 +14,10 @@ const puedeApt = () => !esMon() || !!(PERFILES[PERFIL] || {}).apertura;
 const AKEY = s => 'programas-nombres-apertura-' + s;
 const nomsApt = s => { try { return JSON.parse(localStorage.getItem(AKEY(s)) || '{}'); } catch (e) { return {}; } };
 const aptDe = s => ((D.apertura || {})[s]) || {};
-const aluApt = s => Object.entries(aptDe(s).alumnos || {}).map(([aid, a]) => [aid, a, nomsApt(s)[aid] || '']).sort((x, y) => (x[2] || x[1].siglas || '').localeCompare(y[2] || y[1].siglas || '', 'es'));
+const ordApt = n => String(n || '').split(',').map(x => x.trim()).join('\u0001');
+const aluApt = s => Object.entries(aptDe(s).alumnos || {}).map(([aid, a]) => [aid, a, nomsApt(s)[aid] || '']).sort((x, y) => ordApt(x[2] || x[1].siglas).localeCompare(ordApt(y[2] || y[1].siglas), 'es', { sensitivity: 'base' }));
 const activo = (a, f) => !a.baja || f < a.baja;   // de baja desde esa fecha: deja de salir en la lista
-const nomVer = (a, n) => n ? n.split(',').reverse().map(x => x.trim()).join(' ') : a.siglas;
+const nomVer = (a, n) => n || a.siglas;   // «Apellidos, Nombre», como en Séneca
 // Días de servicio: lunes a viernes con cole
 const diaServicio = f => { cargarCalCole(); const w = new Date(f + 'T12:00').getDay(); return w > 0 && w < 6 && !sinCole(f); };
 function diasMesApt(mes) { const y = +mes.slice(0, 4), m = +mes.slice(5), n = new Date(y, m, 0).getDate(), r = []; for (let d = 1; d <= n; d++) { const f = mes + '-' + pad(d); if (diaServicio(f)) r.push(f); } return r; }
@@ -142,7 +143,7 @@ function dlgPegarApt() {
     const [ap, rest] = nom.split(','); const no = (rest || '').replace(/\b\d.*$/, '').trim().replace(/\s+/g, ' ');
     return { ap: ap.trim().replace(/\s+/g, ' '), no, curso: cur.trim() };
   }).filter(x => x.ap && x.no);
-  $('paT').oninput = () => { const L = leer(); $('paV').innerHTML = L.length ? '<b>' + L.length + '</b> alumnos/as: ' + L.map(x => esc(x.no + ' ' + x.ap)).join(', ') : ''; };
+  $('paT').oninput = () => { const L = leer(); $('paV').innerHTML = L.length ? '<b>' + L.length + '</b> alumnos/as: ' + L.map(x => esc(x.ap + ', ' + x.no)).join(', ') : ''; };
   $('paC').onclick = () => $('dlg').close();
   $('paOk').onclick = () => {
     const L = leer(); if (!L.length) return toast('No encuentro nombres con el formato «Apellidos, Nombre»', 'err');
