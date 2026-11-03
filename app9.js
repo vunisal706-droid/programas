@@ -25,6 +25,7 @@ function rAsistencia(g, selMes) {
     const todos = A.length && A.every(([aid]) => fmtSen((X.alu || {})[aid]) === fmtSen(X.doc));
     h += todos ? '<div class="aviso verde">Vino todo el alumnado los mismos días que el monitor/a: en «Usos del servicio» pega <b>' + fmtSen(X.doc) + '</b> y pulsa «Aplicar a todos/as los/as alumnos/as de esta página».</div>'
       : '<div class="aviso">Hay alumnos/as con faltas: pega a cada uno su línea en «Usos del servicio».</div>';
+    h += '<div style="margin-top:8px"><b>Del tirón:</b> ' + botonesCopia(g, X) + '</div>' + bloqueMarcAsis();
   }
   return h + '</div>';
 }
@@ -65,7 +66,7 @@ const _rSesiones9 = rSesiones; rSesiones = (g, selMes) => rAsistencia(g, selMes)
 
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-copiar9]');
-  if (c) { const t = c.dataset.copiar9; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copiado: ' + t)).catch(() => toast('No se pudo copiar: selecciona y copia ' + t, 'err')); return; }
+  if (c) { const t = c.dataset.copiar9 === '__MARC__' ? codigoMarcAsis() : c.dataset.copiar9, msg = c.dataset.msg; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(msg || (t.startsWith('javascript:') ? 'Código copiado' : 'Copiado: ' + t))).catch(() => toast('No se pudo copiar: selecciona y copia ' + t, 'err')); return; }
   const b = e.target.closest('[data-acc9]'); if (!b) return;
   ({ todo: asisTodo, editar: asisEditar }[b.dataset.acc9] || (() => { }))(b.dataset.gid);
 });
@@ -88,11 +89,59 @@ rAcomp = function () {
       return '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:14px;background:' + (X ? 'var(--ok-soft)' : '#fff') + '">' +
         '<div style="flex:1;min-width:170px"><b style="font-size:1.05rem">' + esc(g.nombre) + '</b><br><span class="small ' + (X ? '' : 'muted') + '">' + (X ? '✔ Guardada: ' + (fmtSen(X.doc) || 'ningún día') + (faltas ? ' · ' + faltas + ' con faltas' : ' · todos vinieron') : 'Sin guardar · previstos: ' + (fmtSen(prev) || '—')) + '</span></div>' +
         '<button class="btn" data-acc9="todo" data-gid="' + gid + '"' + (prev.length ? '' : ' disabled') + '>✅ Todos los días</button>' +
-        '<button class="btn sec" data-acc9="editar" data-gid="' + gid + '">✏️ Editar</button></div>';
-    }).join('') + '</div></div>';
+        '<button class="btn sec" data-acc9="editar" data-gid="' + gid + '">✏️ Editar</button>' + (X ? '<div style="flex-basis:100%">' + botonesCopia(g, X) + '</div>' : '') + '</div>';
+    }).join('') + '</div>' + bloqueMarcAsis() + '</div>';
   // la colocamos justo después de la tarjeta de cabecera
   const fin = html.indexOf('<div class="card"', html.indexOf('PROA Andalucía · Acompañamiento'));
   return fin > 0 ? html.slice(0, fin) + card + html.slice(fin) : card + html;
 };
 
 document.addEventListener('change', e => { if (e.target.id === 'mesAsis9') { mesResumen = e.target.value; render(); } });
+
+// ─── Favorito «Pegar asistencia en Séneca» (Usos del servicio) ───
+// Alumnado: líneas «SIGLAS<TAB>días» → busca a cada alumno/a por sus siglas en la tabla de Séneca.
+// Monitor/a: una sola línea «27,29» → casilla «Periodo de asistencia» del empleado/a.
+function _marcAsis() {(async () => {
+  const ds = [document]; document.querySelectorAll('iframe,frame').forEach(f => { try { if (f.contentDocument) ds.push(f.contentDocument); } catch (e) { } });
+  const doc = ds.find(d => d.querySelector('input[id^="PERIODO_"]'));
+  if (!doc) { alert('Abre antes en Séneca el grupo → «Usos del servicio» y elige el mes.'); return; }
+  const P = ['de', 'del', 'la', 'las', 'los', 'y', 'da', 'di'];
+  const norm = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const sig = t => { const [ap, no] = t.split(',').map(x => (x || '').trim()); return (no + ' ' + ap).split(/\s+/).filter(p => p && !P.includes(p.toLowerCase())).map(p => p[0]).join(''); };
+  const put = (e, v) => { e.focus(); e.value = v; ['input', 'change', 'keyup', 'blur'].forEach(x => e.dispatchEvent(new Event(x, { bubbles: true }))); };
+  const run = t => {
+    const L = String(t || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    if (!L.length) { alert('El portapapeles está vacío. Pulsa antes «Copiar» en Programas del cole.'); return; }
+    if (L.length === 1 && /^[\d,\s]+$/.test(L[0])) {
+      const e = doc.getElementById('PERIODO_EMPLEADO_1'); if (!e) { alert('No encuentro la casilla del empleado/a.'); return; }
+      put(e, L[0].replace(/\s/g, '')); alert('Asistencia del empleado/a pegada: ' + L[0].replace(/\s/g, '') + '\n\nRevisa y pulsa Guardar.'); return;
+    }
+    const M = {}; L.forEach(l => { const m = l.split('\t'); if (m.length > 1) M[norm(m[0])] = m[1].replace(/\s/g, ''); });
+    const filas = [...doc.querySelectorAll('input[id^="PERIODO_"]')].filter(e => !/EMPLEADO/.test(e.id));
+    let n = 0; const sin = [];
+    filas.forEach(e => {
+      const tr = e.closest('tr') || e.parentElement.parentElement, txt = (tr.textContent || '').replace(/\s+/g, ' ').trim();
+      const nom = (txt.match(/^[^,]+,[^0-9]+?(?=\s+\d|$)/) || [txt])[0].trim();
+      const v = M[norm(nom)] !== undefined ? M[norm(nom)] : M[norm(sig(nom))];
+      if (v !== undefined) { put(e, v); n++; } else sin.push(nom);
+    });
+    alert(n + ' de ' + filas.length + ' alumnos/as rellenados.' + (sin.length ? '\n\nSin dato en la app: ' + sin.join('; ') : '') + '\n\nRevisa y pulsa Guardar.');
+  };
+  try { run(await navigator.clipboard.readText()); }
+  catch (e) {
+    const a = doc.createElement('textarea'); a.placeholder = 'El navegador no deja leer el portapapeles. Pega aquí con Ctrl+V';
+    a.style.cssText = 'position:fixed;top:20%;left:20%;width:60%;height:40%;z-index:2147483647;font-size:16px;padding:12px;border:4px solid #1f9d55;border-radius:12px';
+    doc.body.appendChild(a); a.focus(); a.addEventListener('paste', () => setTimeout(() => { const v = a.value; a.remove(); run(v); }, 0));
+  }
+})();}
+const codigoMarcAsis = () => 'javascript:' + encodeURIComponent('(' + _marcAsis.toString() + ')()');
+function bloqueMarcAsis() {
+  const href = codigoMarcAsis().replace(/"/g, '&quot;');
+  return '<details style="background:#f0faf4;border:2px dashed #9fd8b5;border-radius:12px;padding:10px 14px;margin-top:10px"><summary style="cursor:pointer;font-weight:800">📌 Favorito «Pegar asistencia en Séneca»: rellena todas las casillas de golpe</summary>' +
+    '<div class="small" style="line-height:1.6;margin-top:8px"><b>Instalar (una vez en cada ordenador):</b> muestra la barra de favoritos con <b>Ctrl+Mayús+B</b> y <b>arrastra</b> este botón hasta ella:' +
+    '<div style="text-align:center;margin:10px 0"><a href="' + href + '" onclick="event.preventDefault();toast(\'Arrástralo a la barra de favoritos, no lo pulses aquí\',\'err\')" style="display:inline-block;background:#1f9d55;color:#fff;text-decoration:none;font-weight:800;padding:10px 18px;border-radius:12px;cursor:grab">📋 Pegar asistencia en Séneca</a></div>' +
+    '¿No te deja arrastrar? <button class="btn sec peq" data-copiar9="__MARC__">Copiar código</button> y en Séneca: <b>Ctrl+D</b> → nombre «Pegar asistencia en Séneca» → <b>Más…</b> → pega el código en la URL → Guardar.' +
+    '<p style="margin-top:6px"><b>Usar:</b> en Séneca abre el grupo → <b>Usos del servicio</b> → elige el mes. Aquí pulsa <b>📋 Copiar alumnado</b> y en Séneca pulsa el favorito: se rellenan todos. Después <b>📋 Copiar profesor/a</b> y otra vez el favorito: se rellena la asistencia del empleado/a. Revisa y guarda.</p></div></details>';
+}
+const txtAlumnado = (g, X) => Object.entries(g.alumnos || {}).filter(([aid]) => fmtSen((X.alu || {})[aid])).map(([aid, a]) => a.siglas + '\t' + fmtSen(X.alu[aid])).join('\n');
+const botonesCopia = (g, X) => X ? '<button class="btn sec peq" data-copiar9="' + esc(txtAlumnado(g, X)) + '" data-msg="Alumnado copiado: pulsa el favorito en Séneca">📋 Copiar alumnado</button> <button class="btn sec peq" data-copiar9="' + fmtSen(X.doc) + '" data-msg="Profesor/a copiado: pulsa el favorito en Séneca">📋 Copiar profesor/a</button>' : '';
