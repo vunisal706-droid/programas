@@ -42,3 +42,11 @@ Añade también este bloque junto a `"programas"` para que las reuniones marcada
 El alumnado se guarda solo por siglas.
 
 Los plazos (`plazos.js`) se copian de la Agenda del Equipo Directivo; las palancas (`palancas.js`) del Plan de Actividades Palanca 2026/27.
+
+## Plan de Apertura (Comedor y Aula matinal)
+Para que Sandra pueda pasar lista, añade dentro de `"cursos": { "$c": {` (junto a `"grupos"`, con su coma):
+
+```json
+"apertura": { ".read": "auth != null && (auth.token.email == 'vunisal706@capitulaciones.local' || auth.token.email == 'mrodrod323@capitulaciones.local' || auth.token.email == 'emunrom369@capitulaciones.local' || auth.token.email == 'proa.sandra@capitulaciones.local')", ".write": "auth != null && (auth.token.email == 'vunisal706@capitulaciones.local' || auth.token.email == 'mrodrod323@capitulaciones.local' || auth.token.email == 'emunrom369@capitulaciones.local' || auth.token.email == 'proa.sandra@capitulaciones.local')" }
+```
+Datos: `apertura/<comedor|matinal>/alumnos` (solo siglas y curso) y `apertura/<servicio>/dias/<fecha>`. Los nombres completos solo en el dispositivo.
