@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2f5fb3">
+<meta name="robots" content="noindex">
+<title>Reunión telemática · PROA</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#2f5fb3;--primary-dark:#1f3f7a;--primary-soft:#e8effc;--text:#1c2638;--muted:#5d6b82;--border:#d9e1ee;--ok:#1f9d55;--ok-soft:#e3f6ea;--warn-soft:#fff3d6;--shadow:0 6px 24px rgba(31,63,122,.10)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito Sans',system-ui,sans-serif;color:var(--text);background:#f4f7fc;font-size:15px;line-height:1.45}
+h1,h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--primary-dark)}
+h1{font-size:1.2rem}h2{font-size:1.05rem;margin-bottom:6px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:#fff;width:100%}
+textarea{min-height:64px;resize:vertical}
+label{font-size:.8rem;font-weight:800;color:var(--muted);display:block;margin:8px 0 4px}
+.btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:800}
+.btn.sec{background:#fff;color:var(--primary-dark);border:1px solid var(--border)}
+.btn.peq{padding:6px 10px;font-size:.85rem}
+.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.95);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.top .sub{font-size:.85rem;color:var(--muted);font-weight:700}
+.esp{flex:1}
+.wrap{max-width:1200px;margin:0 auto;padding:14px;display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:14px}
+.punto{border-top:1px solid #edf1f7;padding:12px 0}.punto:first-of-type{border-top:0}
+.punto h3{font-size:.98rem;margin-bottom:4px}
+.hint{font-size:.82rem;color:var(--muted);margin-bottom:6px}
+.otro{background:var(--primary-soft);border-radius:10px;padding:7px 10px;margin:5px 0;font-size:.92rem;white-space:pre-line}
+.otro b{color:var(--primary-dark)}
+.chat{position:sticky;top:70px;display:flex;flex-direction:column;height:calc(100vh - 90px)}
+.msgs{flex:1;overflow:auto;padding:4px 2px;display:flex;flex-direction:column;gap:6px}
+.m{max-width:85%;background:#f0f3f9;border-radius:12px;padding:6px 10px;font-size:.92rem;align-self:flex-start;white-space:pre-line}
+.m.yo{background:var(--primary);color:#fff;align-self:flex-end}
+.m small{display:block;font-size:.72rem;font-weight:800;opacity:.75}
+.envio{display:flex;gap:6px;margin-top:8px}.envio input{flex:1}
+.aviso{background:var(--warn-soft);border-radius:12px;padding:10px 12px;font-size:.88rem;margin-bottom:10px}
+.ok{background:var(--ok-soft)}
+.gente{font-size:.82rem;color:var(--muted)}
+.guardado{font-size:.75rem;color:var(--ok);font-weight:800;min-height:1em}
+#entrar{max-width:420px;margin:60px auto}
+.tabs{display:none}
+@media(max-width:820px){.wrap{grid-template-columns:1fr}.chat{position:static;height:70vh}.tabs{display:flex;gap:6px;padding:8px 14px 0}.tabs button{flex:1}.oc-m{display:none}}
+</style>
+</head>
+<body>
+<div id="entrar" class="card" style="display:none">
+  <h1>🤝 Reunión telemática</h1>
+  <p class="sub" id="eTit" style="margin:4px 0 10px;color:var(--muted)"></p>
+  <label>Tu nombre</label><input id="eNom" autocomplete="name" placeholder="Nombre y apellidos">
+  <label>Participas como</label>
+  <select id="eRol"><option>Tutor/a</option><option>Persona acompañante</option><option>Coordinación del PROA</option><option>Equipo directivo</option><option>Otro</option></select>
+  <div style="margin-top:14px"><button class="btn" id="eOk">Entrar en la reunión</button></div>
+  <p class="gente" style="margin-top:10px">Usa solo las siglas del alumnado. Lo que se escribe en los puntos del orden del día pasa al acta; el chat no.</p>
+</div>
+<div id="app" style="display:none">
+  <div class="top"><div><h1 id="tit"></h1><div class="sub" id="sub"></div></div><div class="esp"></div><span class="gente" id="gente"></span><a class="btn sec peq" id="video" target="_blank" rel="noopener" style="text-decoration:none">📹 Videollamada (opcional)</a></div>
+  <div class="tabs"><button class="btn" data-t="puntos">📝 Orden del día</button><button class="btn sec" data-t="chat">💬 Chat</button></div>
+  <div class="wrap">
+    <div class="card" id="cPuntos">
+      <div class="aviso" id="estado">Escribe en cada punto lo que veas necesario (lo que informas, lo que se acuerda). Se guarda solo y lo ven todos. <b>Esto es lo que irá al acta.</b></div>
+      <div id="puntos"></div>
+      <div id="envio" style="border-top:1px solid #edf1f7;padding-top:12px;margin-top:6px"><p class="gente" style="margin-bottom:8px">Cuando hayáis terminado de escribir, una de las dos pulsa este botón. Víctor recibe la reunión y puede descargar el acta.</p><button class="btn" id="bEnviar">📨 Hemos terminado: enviar a Víctor</button></div>
+    </div>
+    <div class="card chat oc-m" id="cChat">
+      <h2>💬 Chat</h2><p class="gente" style="margin-bottom:6px">Para hablar entre vosotras. No sale en el acta.</p>
+      <div class="msgs" id="msgs"></div>
+      <div class="envio"><input id="txt" placeholder="Escribe un mensaje…" maxlength="1000"><button class="btn" id="env">Enviar</button></div>
+    </div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SALA = new URLSearchParams(location.search).get('s') || '';
+const app = firebase.initializeApp({ apiKey: 'AIzaSyC7NgtJ1lUecZr5LR3jK1wURfzNIakJ1-8', authDomain: 'gestorpt-7946b.firebaseapp.com', databaseURL: 'https://gestorpt-7946b-default-rtdb.europe-west1.firebasedatabase.app', projectId: 'gestorpt-7946b' }, 'sala');
+const db = app.database(), R = db.ref('programas_salas/' + SALA);
+let YO = null; try { YO = JSON.parse(localStorage.getItem('programas-sala-yo') || 'null'); } catch (e) { }
+if (!YO || !YO.pid) YO = { pid: Math.random().toString(36).slice(2, 12) + Date.now().toString(36) };
+const QP = new URLSearchParams(location.search); if (QP.get('n') && !YO.n) { YO.n = QP.get('n'); YO.rol = QP.get('r') || 'Tutor/a'; try { localStorage.setItem('programas-sala-yo', JSON.stringify(YO)); } catch (e) { } }
+let S = null, timers = {};
+const fallo = t => { document.body.innerHTML = '<div class="card" style="max-width:460px;margin:60px auto"><h1>🤝 Reunión telemática</h1><p style="margin-top:8px">' + t + '</p></div>'; };
+if (!/^[a-z0-9]{16,}$/.test(SALA)) fallo('El enlace de la reunión no es correcto. Pide de nuevo el enlace a la coordinación del PROA.');
+else R.once('value').then(s => {
+  S = s.val(); if (!S) return fallo('Esta reunión no existe o ya se ha cerrado.');
+  $('eTit').textContent = S.titulo + ' · ' + S.cuando;
+  if (YO.n) iniciar(); else { $('entrar').style.display = 'block'; $('eNom').focus(); }
+}).catch(e => fallo('No se puede abrir la reunión (permisos). Avisa a la coordinación del PROA.'));
+$('eOk').onclick = () => { const n = $('eNom').value.trim(); if (!n) return $('eNom').focus(); YO.n = n; YO.rol = $('eRol').value; try { localStorage.setItem('programas-sala-yo', JSON.stringify(YO)); } catch (e) { } $('entrar').style.display = 'none'; iniciar(); };
+function iniciar() {
+  $('app').style.display = 'block';
+  $('tit').textContent = S.titulo; $('sub').textContent = S.cuando;
+  $('video').href = 'https://meet.jit.si/CapitulacionesPROA-' + SALA.slice(0, 10);
+  R.child('part/' + YO.pid).set({ n: YO.n, rol: YO.rol, ts: firebase.database.ServerValue.TIMESTAMP });
+  dibujarPuntos();
+  R.child('aport').on('value', s => { S.aport = s.val() || {}; otros(); });
+  R.child('part').on('value', s => { const v = s.val() || {}, E = v._envio; const p = Object.entries(v).filter(([k]) => k[0] !== '_').map(([, x]) => x); enviada(E); $('gente').textContent = '👥 ' + p.map(x => x.n.split(' ')[0]).join(', '); });
+  R.child('abierta').on('value', s => { const ab = s.val() !== false; $('estado').className = 'aviso' + (ab ? '' : ' ok'); if (!ab) { $('estado').innerHTML = '✅ La coordinación ha cerrado la reunión y ha pasado lo escrito al acta.'; document.querySelectorAll('[data-i]').forEach(t => t.disabled = true); } });
+  R.child('chat').limitToLast(200).on('value', s => {
+    const M = Object.values(s.val() || {}).sort((a, b) => (a.ts || 0) - (b.ts || 0)), box = $('msgs'), abajo = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+    box.innerHTML = M.map(m => '<div class="m' + (m.pid === YO.pid ? ' yo' : '') + '"><small>' + esc(m.n) + ' · ' + (m.ts ? new Date(m.ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '') + '</small>' + esc(m.t) + '</div>').join('') || '<p class="gente">Aún no hay mensajes.</p>';
+    if (abajo) box.scrollTop = box.scrollHeight;
+  });
+}
+function dibujarPuntos() {
+  const mio = i => (((S.aport || {})[i] || {})[YO.pid] || {}).t || '';
+  $('puntos').innerHTML = (S.puntos || []).map((p, i) => '<div class="punto"><h3>' + (i + 1) + '. ' + esc(p) + '</h3>' + (S.hints && S.hints[i] ? '<p class="hint">' + esc(S.hints[i]) + '</p>' : '') +
+    '<div id="o' + i + '"></div><label>Lo que escribes tú (' + esc(YO.rol) + ')</label><textarea data-i="' + i + '" placeholder="Escribe aquí lo que informas o lo que se acuerda en este punto">' + esc(mio(i)) + '</textarea><div class="guardado" id="g' + i + '"></div></div>').join('');
+  document.querySelectorAll('[data-i]').forEach(t => t.addEventListener('input', () => {
+    const i = t.dataset.i; clearTimeout(timers[i]); $('g' + i).textContent = '';
+    timers[i] = setTimeout(() => R.child('aport/' + i + '/' + YO.pid).set(t.value.trim() ? { n: YO.n, rol: YO.rol, t: t.value, ts: firebase.database.ServerValue.TIMESTAMP } : null).then(() => $('g' + i).textContent = '✔ Guardado'), 700);
+  }));
+}
+function otros() {
+  (S.puntos || []).forEach((p, i) => { const o = Object.entries((S.aport || {})[i] || {}).filter(([k, v]) => k !== YO.pid && v && v.t); $('o' + i).innerHTML = o.map(([, v]) => '<div class="otro"><b>' + esc(v.rol) + ' · ' + esc(v.n) + ':</b> ' + esc(v.t) + '</div>').join(''); });
+}
+function enviada(E) {
+  if (!E) return;
+  $('envio').innerHTML = '<div class="aviso ok">✅ Enviada a Víctor por ' + esc(E.n) + (E.ts ? ' el ' + new Date(E.ts).toLocaleString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '') + '. Ya no hace falta hacer nada más.</div>';
+  document.querySelectorAll('[data-i]').forEach(t => t.disabled = true);
+}
+$('bEnviar').onclick = () => { if (!confirm('¿Enviar la reunión a Víctor? Después ya no se podrá cambiar lo escrito.')) return; R.child('part/_envio').set({ n: YO.n, rol: YO.rol, ts: firebase.database.ServerValue.TIMESTAMP }); };
+function enviar() { const t = $('txt').value.trim(); if (!t) return; R.child('chat').push({ pid: YO.pid, n: YO.n, t, ts: firebase.database.ServerValue.TIMESTAMP }); $('txt').value = ''; }
+$('env').onclick = enviar; $('txt').onkeydown = e => { if (e.key === 'Enter') enviar(); };
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { const c = b.dataset.t === 'chat'; $('cChat').classList.toggle('oc-m', !c); $('cPuntos').classList.toggle('oc-m', c); document.querySelectorAll('.tabs button').forEach(x => x.className = 'btn' + (x === b ? '' : ' sec')); });
+</script>
+</body>
+</html>

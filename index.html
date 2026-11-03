@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2f5fb3">
+<title>Programas del cole</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Programas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#2f5fb3;--primary-dark:#1f3f7a;--primary-soft:#e8effc;
+  --text:#1c2638;--muted:#5d6b82;--border:#d9e1ee;--card:#fff;
+  --ok:#1f9d55;--ok-soft:#e3f6ea;--warn:#b86e00;--warn-soft:#fff3d6;--bad:#c93838;--bad-soft:#fde6e6;
+  --zts:#0f8a7e;--zts-soft:#dff4f1;--proa:#7a4fc9;--proa-soft:#efe8fb;--proap:#d9622b;--proap-soft:#fdebe2;
+  --radius:16px;--shadow:0 6px 24px rgba(31,63,122,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito Sans',system-ui,sans-serif;color:var(--text);background:#f4f7fc;font-size:15px;line-height:1.45;min-height:100vh}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;background:radial-gradient(40% 35% at 20% 25%,#dbe8ff 0,transparent 70%),radial-gradient(35% 30% at 80% 20%,#ffe9d6 0,transparent 70%),radial-gradient(40% 35% at 70% 80%,#dff4f1 0,transparent 70%),radial-gradient(35% 35% at 15% 85%,#efe8fb 0,transparent 70%),#f4f7fc}
+h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-.01em}
+h2{font-size:1.4rem;color:var(--primary-dark)}h3{font-size:1.1rem}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:#fff;width:100%}
+textarea{min-height:70px;resize:vertical}
+label{font-size:.8rem;font-weight:800;color:var(--muted);display:block;margin:8px 0 4px}
+.oculto{display:none!important}
+.header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.header-in{max-width:1200px;margin:0 auto;padding:8px 14px;display:flex;align-items:center;gap:10px}
+.header img{height:38px}
+.header h1{font-size:1.15rem;color:var(--primary-dark);line-height:1.1;cursor:pointer}
+.header h1 small{display:block;font-family:'Nunito Sans';font-size:.78rem;font-weight:700;color:var(--muted)}
+.esp{flex:1}
+.pill{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:.85rem;color:var(--primary-dark)}
+.dot{width:9px;height:9px;border-radius:50%;background:#f0b429;display:inline-block}.dot.ok{background:var(--ok)}.dot.off{background:var(--bad)}
+.nav{max-width:1200px;margin:0 auto;padding:10px 14px 0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.nav button{flex:0 0 auto;border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 14px;font-weight:800;color:var(--muted);font-size:.92rem;min-height:44px}
+.nav button.on{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 2px 6px rgba(20,30,50,.18)}
+.wrap{max-width:1200px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g2{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.btn{border:none;background:var(--primary);color:#fff;border-radius:10px;padding:9px 14px;font-weight:800;font-size:.9rem;min-height:40px}
+.btn.sec{background:#fff;color:var(--primary-dark);border:1px solid var(--border)}
+.btn.peq{padding:6px 10px;min-height:32px;font-size:.82rem}
+.btn.rojo{background:var(--bad)}
+.muted{color:var(--muted)}.small{font-size:.84rem}
+.tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.8rem;font-weight:800}
+.t-ZTS{background:var(--zts-soft);color:var(--zts)}.t-PROA{background:var(--proa-soft);color:var(--proa)}.t-PROAp{background:var(--proap-soft);color:var(--proap)}
+.st-ok{background:var(--ok-soft);color:var(--ok)}.st-warn{background:var(--warn-soft);color:var(--warn)}.st-bad{background:var(--bad-soft);color:var(--bad)}.st-gris{background:#eef1f6;color:var(--muted)}
+.prog{border-top:5px solid var(--primary)}.prog.ZTS{border-top-color:var(--zts)}.prog.PROA{border-top-color:var(--proa)}.prog.PROAp{border-top-color:var(--proap)}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.kpi{flex:1;min-width:80px;background:#f6f8fc;border-radius:12px;padding:8px 10px}
+.kpi b{display:block;font-size:1.35rem;font-family:'Bricolage Grotesque'}.kpi span{font-size:.8rem;color:var(--muted);font-weight:700}
+.item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf1f7}
+.item:last-child{border-bottom:none}
+.item .cuerpo{flex:1;min-width:0}
+.item .tt{font-weight:800}
+.item .dd{font-size:.86rem;color:var(--muted)}
+.item .ruta{font-size:.8rem;color:#486089;background:#f2f6fd;border-radius:8px;padding:3px 8px;margin-top:4px;display:inline-block}
+.item a{font-size:.84rem;font-weight:800;color:var(--primary);margin-right:10px;text-decoration:none}
+.chk{width:24px;height:24px;flex:0 0 auto;margin-top:2px;accent-color:var(--ok)}
+.fecha{flex:0 0 74px;text-align:center;border-radius:10px;background:#f2f5fa;padding:4px;font-weight:800;font-size:.8rem;color:var(--primary-dark)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:.82rem;color:var(--muted)}
+.chip.on{background:var(--primary-dark);color:#fff;border-color:var(--primary-dark)}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{border-bottom:1px solid #edf1f7;padding:7px 6px;text-align:left;vertical-align:top}
+th{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.tabla{overflow-x:auto}
+.asis{display:flex;gap:4px}
+.asis button{border:1px solid var(--border);background:#fff;border-radius:8px;min-width:38px;min-height:36px;font-weight:800}
+.asis button.on.P{background:var(--ok);color:#fff;border-color:var(--ok)}
+.asis button.on.F{background:var(--bad);color:#fff;border-color:var(--bad)}
+.asis button.on.J{background:var(--warn);color:#fff;border-color:var(--warn)}
+.aviso{background:var(--warn-soft);color:#7a4b00;border-radius:10px;padding:8px 12px;font-size:.86rem;margin:8px 0}
+.aviso.rojo{background:var(--bad-soft);color:#8a1f1f}
+.aviso.verde{background:var(--ok-soft);color:#14663a}
+details summary{cursor:pointer;font-weight:800;color:var(--primary-dark)}
+.pal{border-left:5px solid var(--proap)}
+.barra{height:8px;background:#edf1f7;border-radius:99px;overflow:hidden}.barra i{display:block;height:100%;background:var(--ok)}
+/* Acceso */
+#pantallaAcceso{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:16px;background:#f4f7fc;overflow-y:auto}
+.acc{margin:auto 0}
+.acc{background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:22px;max-width:420px;width:100%}
+.acc img{height:60px;display:block;margin:0 auto 8px}
+.perfiles{display:grid;gap:8px;margin:12px 0}
+/* Acceso · botones táctiles por pasos */
+.acc{max-width:560px;--c:var(--primary);--c-d:var(--primary-dark);--c-s:var(--primary-soft)}
+.acc[data-prog="ZTS"]{--c:var(--zts);--c-d:#0a6158;--c-s:var(--zts-soft)}
+.acc[data-prog="PROA"]{--c:var(--proa);--c-d:#5a3699;--c-s:var(--proa-soft)}
+.acc[data-prog="PROA+"]{--c:var(--proap);--c-d:#a8461a;--c-s:var(--proap-soft)}
+.paso{display:flex;align-items:center;gap:10px;margin:18px 0 10px;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:1.05rem;color:var(--text)}
+.paso i{font-style:normal;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font-size:.95rem;flex:none}
+.paso.espera{color:var(--muted)}.paso.espera i{background:#c9d3e3}
+.paso.toca i{animation:latido 1.6s ease-in-out infinite}
+@keyframes latido{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 45%,transparent)}50%{box-shadow:0 0 0 9px transparent}}
+.ops{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.op{position:relative;display:flex;align-items:center;gap:12px;text-align:left;min-height:64px;padding:12px 14px;border-radius:16px;border:2px solid var(--oc-b,#d9e1ee);background:var(--oc-s,#fff);color:var(--text);box-shadow:0 5px 0 var(--oc-b,#d9e1ee);transition:transform .08s,box-shadow .08s,background .15s}
+.op:hover{transform:translateY(-2px);box-shadow:0 7px 0 var(--oc-b,#d9e1ee)}
+.op:active{transform:translateY(4px);box-shadow:0 1px 0 var(--oc-b,#d9e1ee)}
+.op:focus-visible{outline:3px solid var(--oc,var(--c));outline-offset:3px}
+.op .e{font-size:1.8rem;line-height:1;flex:none}
+.op b{display:block;font-size:1rem;line-height:1.2}.op small{display:block;color:var(--muted);font-size:.8rem;line-height:1.25;margin-top:2px}
+.op.on{background:var(--oc,var(--c));border-color:var(--oc-d,var(--c-d));color:#fff;box-shadow:0 5px 0 var(--oc-d,var(--c-d))}
+.op.on small{color:rgba(255,255,255,.88)}
+.op.on::after{content:'✓';position:absolute;top:-9px;right:-9px;width:26px;height:26px;border-radius:50%;background:#fff;color:var(--oc,var(--c));border:2px solid var(--oc,var(--c));display:grid;place-items:center;font-weight:900;font-size:.85rem}
+.op.prog{flex-direction:column;align-items:flex-start;gap:6px;min-height:118px}
+.op.prog .e{font-size:2.2rem}
+.op[data-pa="ZTS"]{--oc:var(--zts);--oc-d:#0a6158;--oc-s:var(--zts-soft);--oc-b:#a9ddd6}
+.op[data-pa="PROA"]{--oc:var(--proa);--oc-d:#5a3699;--oc-s:var(--proa-soft);--oc-b:#d3c2f1}
+.op[data-pa="PROA+"]{--oc:var(--proap);--oc-d:#a8461a;--oc-s:var(--proap-soft);--oc-b:#f6c6ad}
+.op.cat,.op.per{--oc:var(--c);--oc-d:var(--c-d);--oc-b:color-mix(in srgb,var(--c) 30%,#fff)}
+#accEntrar{min-height:54px;font-size:1.1rem;font-weight:800;border-radius:16px;background:var(--c);box-shadow:0 5px 0 var(--c-d);border:none;color:#fff;transition:transform .08s,box-shadow .08s}
+#accEntrar:active{transform:translateY(4px);box-shadow:0 1px 0 var(--c-d)}
+@media (prefers-reduced-motion:reduce){.paso.toca i{animation:none}.op,#accEntrar{transition:none}}
+
+.perfil-btn{display:flex;gap:10px;align-items:center;border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px;text-align:left}
+.perfil-btn.on{border-color:var(--primary);background:var(--primary-soft)}
+.perfil-btn .e{font-size:1.5rem}.perfil-btn small{display:block;color:var(--muted)}
+#accError{display:none;background:var(--bad-soft);color:#8a1f1f;border-radius:10px;padding:8px;margin-top:8px;font-size:.86rem}
+dialog{border:none;border-radius:18px;padding:20px;max-width:560px;width:calc(100% - 24px);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(20,30,50,.45)}
+dialog h2{margin-bottom:8px}
+dialog p{margin:6px 0}
+.pie{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1c2638;color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;z-index:900;display:none;max-width:90%}
+#toast.err{background:var(--bad)}
+.logos{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:20px;opacity:.85}
+.logos img{height:34px}
+body.mon #nav button:not([data-s=acomp]),body.mon #selCurso{display:none}
+@media (max-width:600px){.header h1{font-size:1rem}.header h1 small{display:none}.fecha{flex-basis:62px}}
+</style>
+</head>
+<body>
+<div id="pantallaAcceso">
+  <div class="acc">
+    <img src="img/colegio.png" alt="CEIP Capitulaciones">
+    <h2 style="text-align:center">Programas del cole</h2>
+    <p class="muted small" style="text-align:center">ZTS · PROA Andalucía · PROA+ Transfórmate</p>
+    <div class="paso" id="pasoProg"><i>1</i>Elige el programa</div>
+    <div class="ops" id="listaProg"></div>
+    <div class="paso" id="pasoCat"><i>2</i>¿Quién eres?</div>
+    <div class="ops" id="listaCat"></div>
+    <div class="paso" id="pasoPer"><i>3</i>Toca tu nombre</div>
+    <div class="ops" id="listaPerfiles"></div>
+    <div id="accDatos">
+    <label for="accIdea">Usuario (IdEA, o el que te haya dado dirección)</label>
+    <input id="accIdea" autocomplete="username" autocapitalize="off" spellcheck="false">
+    <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="accRecordar" checked style="width:auto"> Recordarme en este dispositivo</label>
+    <button class="btn" id="accEntrar" style="width:100%;margin-top:10px">Entrar</button>
+    </div>
+    <div id="accError"></div>
+    <div id="instalar" style="display:none;margin-top:16px;padding:12px 14px;border-radius:14px;background:#fff7e6;border:2px solid #f6c66b;text-align:center"><img src="icon-192.png" alt="" width="48" height="48" style="height:48px;border-radius:10px;margin:0 auto 6px"><b style="display:block">Instala «Programas» como app</b><span id="instTxt" class="small muted" style="display:block;margin:4px 0 8px">Tendrás su icono en la pantalla de inicio, separada de Capitoolappciones.</span><button class="btn" id="instBtn" style="width:100%">📲 Instalar en este dispositivo</button></div>
+  </div>
+</div>
+
+<header class="header"><div class="header-in">
+  <img src="img/colegio.png" alt="">
+  <h1 id="tituloApp">Programas del cole<small>ZTS · PROA Andalucía · PROA+</small></h1>
+  <div class="esp"></div>
+  <span class="small muted"><span class="dot" id="dot"></span></span>
+  <select id="selCurso" class="pill" style="width:auto"></select>
+  <button class="pill" id="perfilPill">—</button>
+</div></header>
+
+<nav class="nav" id="nav">
+  <button data-s="panel" class="on">🏠 Panel</button>
+  <button data-s="plazos">📅 Plazos</button>
+  <button data-s="acomp">🧑‍🏫 Acompañamiento</button>
+  <button data-s="reuniones">🤝 Reuniones</button>
+  <button data-s="palancas">🎯 PROA+ palancas</button>
+  <button data-s="eco">💶 PROA+ económica</button>
+  <button data-s="memorias">📄 Memorias</button>
+</nav>
+
+<main class="wrap">
+  <section id="sec-panel"></section>
+  <section id="sec-plazos" class="oculto"></section>
+  <section id="sec-acomp" class="oculto"></section>
+  <section id="sec-reuniones" class="oculto"></section>
+  <section id="sec-palancas" class="oculto"></section>
+  <section id="sec-eco" class="oculto"></section>
+  <section id="sec-memorias" class="oculto"></section>
+  <div class="logos"><img src="img/junta.jpg" alt="Junta de Andalucía"></div>
+</main>
+
+<dialog id="dlg"><div id="dlgIn"></div></dialog>
+<dialog id="novedades">
+  <h2>🆕 Novedades</h2>
+  <p>✅ <b>Asistencia para Séneca</b>: en cada grupo, la asistencia del mes con un botón (todos los días previstos) o «Editar» si alguien faltó. Te sale lista para copiar y pegar en Séneca tal cual (27,29): la del monitor/a y la de cada alumno/a.</p>
+  <p>📲 <b>Instalar como app</b>: en la pantalla de entrada hay un botón para instalar «Programas» con su propio icono, separada de Capitoolappciones (ideal para el móvil de las monitoras).</p>
+  <p>📅 <b>Fecha del documento</b>: en la barra de arriba de cada anexo puedes elegir la fecha y se pone sola en «En Santa Fe, a …». Si no eliges ninguna, queda en blanco para rellenar a mano.</p>
+  <p>✍️ <b>Firma en el momento</b>: ya no se guardan firmas. Cada documento (hoja del mes, informe trimestral, programación) se firma con el dedo justo al generarlo. Las firmas guardadas de antes se han borrado.</p>
+  <p>🎨 <b>Pantalla de entrada renovada</b>: botones grandes y de colores en 3 pasos (programa, quién eres y tu nombre), con el color de cada programa.</p>
+  <p>🔑 <b>Entrada más cómoda</b>: después del programa eliges tu grupo (Equipo directivo, ZTS, Monitoras o Tutoras) y solo salen esas personas.</p>
+  <p>🖨️ Los anexos y actas ya se imprimen <b>sin la fecha, el título ni la dirección web</b> arriba y abajo de la hoja.</p>
+  <p>📝 <b>Acta de selección</b>: si a algún alumno/a le falta el nombre completo en este dispositivo, te avisa y puedes pegar la lista de Séneca desde ahí mismo. Al pegar, los alumnos que habías creado a mano con siglas reciben su nombre (sin duplicarse).</p>
+  <p>📋 <b>Pegar alumnado de todos</b> (arriba, en Acompañamiento): pegas de una vez la lista de los 4 grupos y se crean todos los alumnos/as con su nombre completo (solo en este dispositivo).</p>
+  <p>📋 <b>Pegar lista de Séneca</b> (en cada grupo, «Documentos del grupo»): pegas el alumnado seleccionado tal cual sale en Séneca y la app crea las siglas en la nube y guarda los <b>nombres completos solo en este dispositivo</b>, para los anexos oficiales. Con «Copia de nombres» los pasas a otro dispositivo sin subirlos a internet. Avisa si un grupo no llega al mínimo de 8 alumnos/as.</p>
+  <p>📅 <b>Reuniones previstas</b>: en «Reuniones» puedes cargar con un botón las reuniones del curso (quincenales de cada grupo, reunión con familias, coordinación ZTS y comisiones del PROA+) con su orden del día, para editarlas.</p>
+  <p>🤝 <b>Quincenales por curso</b> (en Reuniones): ves cada grupo con sus fechas: ✔ enviadas (toca y descargas el acta), ⚠ celebradas sin enviar y previstas. La monitora o la tutora pulsan «<b>Enviar a Víctor</b>» al terminar la reunión.<br>💌 <b>PDF para las familias</b> que no vinieron a la reunión informativa: botón en cada «Cita con familia».</p>
+  <p>🧭 <b>Acompañamiento reordenado</b>: grupos en orden (Tercero, Cuarto, Quinto, Sexto). Para ti: sesiones dadas, hoja de asistencia para Séneca, documentos, <b>informes trimestrales para descargar</b> (los rellenan los monitores) y lista de cotejo. Los monitores tienen la programación por trimestres, el informe con los <b>saberes básicos</b> ya puestos, su firma con el dedo y las reuniones quincenales por fecha. En la <b>Agenda</b> y en el correo del Tablón sale el enlace de cada reunión quincenal.</p>
+  <p>📝 <b>Acta de selección</b>: la fecha y la hora vienen ya puestas (hoy, 13:00) para que salgan rellenas en el acta; cámbialas por las de la reunión de la comisión.</p>
+  <p>📅 <b>Todas las reuniones</b> salen en la <b>Agenda</b> y en el <b>Tablón</b>. En el correo y PDF semanal, las quincenales, las comisiones del PROA+ y la coordinación ZTS van siempre; las citas con familias y «otras» se pueden marcar o no. Las tutoras entran con su usuario IdEA.</p>
+  <p>🔑 <b>Acceso por programa</b>: primero se elige ZTS, PROA Andalucía o PROA+ y salen solo sus personas. Entran las <b>tutoras de 3.º, 4.º y 5.º y el tutor de 6.º</b>: ven la programación del grupo y las reuniones quincenales, y entran desde ahí en la reunión telemática. Las monitoras ven también la <b>programación</b>.</p>
+  <p>🎥 <b>Reunión telemática integrada</b>: en cada reunión, botón «Reunión telemática». Envías el enlace a la acompañante y al tutor/a (sin usuario); cada una escribe en los puntos del orden del día y hablan por un chat que <b>no</b> pasa al acta. Al terminar, «Cerrar y pasar al acta» y el acta sale con lo escrito.<br>🔧 Arreglado el botón del <b>acta de selección</b>.</p>
+  <p>📄 <b>Actas de reunión desarrolladas</b>: orden del día, desarrollo de cada punto, acuerdos y quién firma (nombre y cargo). Se pueden editar directamente antes de imprimir o descargar en Word.</p>
+  <p>👥 En el <b>acta de selección</b> ya aparecen María Noelia Sáez Guerrero (coordinadora del Equipo de Orientación) y Bianca Ruiz Muñoz (orientadora del EOE).</p>
+  <p><b>Acompañamiento más sencillo:</b></p>
+  <p>🧹 Fuera la asistencia del alumnado: la graban los monitores.<br>
+  🕒 <b>Sesiones dadas</b>: solo marcas los días que se dio clase → horas e importe para la certificación.<br>
+  📷 <b>Fotos → PDF</b>: haz fotos a las hojas firmadas y sale un PDF con el nombre exacto del tipo de documento de Séneca, listo para subir.<br>
+  ✍️ Los monitores pueden <b>rellenar el Anexo X y el XII en el móvil y firmar con el dedo</b> (o seguir en papel con las fechas ya puestas).<br>
+  📝 <b>Informe trimestral (Anexo XV) rápido</b>: contenidos sugeridos por área, Conseguido / En proceso / Sin iniciar con un toque, frases tipo para cada pregunta y «copiar del trimestre anterior».</p>
+  <p class="muted small">Los datos se comparten entre el equipo directivo y la coordinación ZTS. En la nube el alumnado va solo por siglas; los nombres completos se quedan en tu dispositivo.</p>
+  <div class="pie"><button class="btn" onclick="this.closest('dialog').close()">Entendido</button></div>
+</dialog>
+<dialog id="novMon">
+  <h2>👋 Novedades del PROA</h2>
+  <p>✅ <b>Sandra</b>: arriba en Acompañamiento tienes la asistencia de <b>Tercero, Cuarto y Quinto</b> juntos, cada uno con su botón verde y «Editar».</p>
+  <p>✅ <b>Asistencia del mes</b>: si viniste tú y todo el alumnado todos los días previstos, pulsa el botón verde y listo. Si alguien faltó, pulsa «Editar» y quita la marca de ese día.</p>
+  <p>📲 <b>Instálala en tu móvil</b>: en la pantalla de entrada pulsa «Instalar en este dispositivo» y tendrás el icono de «Programas» como una app más.</p>
+  <p>📅 <b>Fecha del documento</b>: en la barra de arriba de cada documento eliges la fecha que quieras y se pone sola.</p>
+  <p>✍️ <b>Firma en el momento</b>: ya no hay firma guardada. Cada vez que descargues la hoja del mes, el informe trimestral o la programación, te pedirá que firmes con el dedo en ese momento.</p>
+  <p>Todo está ordenado en tu pantalla, de arriba abajo:</p>
+  <p>📨 Al terminar cada reunión quincenal, pulsad <b>«Hemos terminado: enviar a Víctor»</b> al final de la página de la reunión.</p>
+  <p>📄 <b>Hojas del mes</b>: marca las sesiones y quién falta y descarga el Anexo X y el XII firmados.<br>
+  🤝 <b>Reuniones quincenales</b>: salen todas las fechas; <b>toca una</b> para entrar y escribir en el orden del día.<br>
+  📘 <b>Programación</b>: los saberes básicos de Lengua y Matemáticas de cada trimestre, para preparar las sesiones.<br>
+  📝 <b>Informe trimestral</b> (monitores): los saberes básicos ya vienen puestos; solo eliges el trimestre y marcas cómo va cada alumno/a.<br>
+  ✍️ <b>Mi firma</b>: fírmala una vez con el dedo y sale sola en todos tus documentos.</p>
+  <p class="muted small">Solo ves tu grupo. El alumnado aparece por siglas.</p>
+  <div class="pie"><button class="btn" onclick="this.closest('dialog').close()">Entendido</button></div>
+</dialog>
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="plazos.js"></script>
+<script src="palancas.js"></script>
+<script src="app.js"></script>
+<script src="app2.js"></script>
+<script src="app3.js"></script>
+<script src="app4.js"></script>
+<script src="app5.js"></script>
+<script src="app6.js"></script>
+<script src="app7.js"></script>
+<script src="app8.js"></script>
+<script src="app9.js"></script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+</body>
+</html>
