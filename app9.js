@@ -119,11 +119,13 @@ function _marcAsis() {(async () => {
     const M = {}; L.forEach(l => { const m = l.split('\t'); if (m.length > 1) M[norm(m[0])] = m[1].replace(/\s/g, ''); });
     const filas = [...doc.querySelectorAll('input[id^="PERIODO_"]')].filter(e => !/EMPLEADO/.test(e.id));
     let n = 0; const sin = [];
+    const K = Object.keys(M).sort((x, y) => y.length - x.length);   // primero los nombres más largos
     filas.forEach(e => {
       const tr = e.closest('tr') || e.parentElement.parentElement, txt = (tr.textContent || '').replace(/\s+/g, ' ').trim();
-      const nom = (txt.match(/^[^,]+,[^0-9]+?(?=\s+\d|$)/) || [txt])[0].trim();
-      const v = M[norm(nom)] !== undefined ? M[norm(nom)] : M[norm(sig(nom))];
-      if (v !== undefined) { put(e, v); n++; } else sin.push(nom);
+      // Séneca pone el curso pegado al nombre («Tres Años INF3», «1º E.P.»…): se compara por el principio
+      const nom = txt.replace(/\s+(Tres|Cuatro|Cinco|Seis)\s+A[ñn]os.*$/i, '').replace(/\s+\d.*$/, '').trim(), tn = norm(txt);
+      const k = K.find(x => x.length > 4 && tn.startsWith(x)) || (M[norm(sig(nom))] !== undefined ? norm(sig(nom)) : null);
+      if (k) { put(e, M[k]); n++; } else sin.push(nom);
     });
     alert(n + ' de ' + filas.length + ' alumnos/as rellenados.' + (sin.length ? '\n\nSin dato en la app: ' + sin.join('; ') : '') + '\n\nRevisa y pulsa Guardar.');
   };

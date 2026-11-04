@@ -157,7 +157,7 @@ function pintarCursos() {
   $('selCurso').innerHTML = [i - 1, i, i + 1].map(y => { const c = y + '-' + String(y + 1).slice(2); return '<option value="' + c + '"' + (c === CURSO ? ' selected' : '') + '>' + y + '/' + String(y + 1).slice(2) + '</option>'; }).join('');
   $('selCurso').onchange = () => { CURSO = $('selCurso').value; conectar(); };
 }
-function novedades() { const K = esMon() ? 'programas-nov-mon-v19' : 'programas-nov-v37'; const dlgId = esMon() ? 'novMon' : 'novedades'; try { if (localStorage.getItem(K)) return; localStorage.setItem(K, 1); } catch (e) { } setTimeout(() => { try { $(dlgId).showModal(); } catch (e) { } }, 500); }
+function novedades() { const K = esMon() ? 'programas-nov-mon-v19' : 'programas-nov-v38'; const dlgId = esMon() ? 'novMon' : 'novedades'; try { if (localStorage.getItem(K)) return; localStorage.setItem(K, 1); } catch (e) { } setTimeout(() => { try { $(dlgId).showModal(); } catch (e) { } }, 500); }
 
 // ─── Navegación ───
 $('nav').onclick = e => { const b = e.target.closest('button'); if (b) irA(b.dataset.s); };
