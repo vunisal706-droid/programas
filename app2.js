@@ -22,6 +22,11 @@ function abrirDoc(titulo, cuerpo, prog) {
   if (!w) return toast('Permite las ventanas emergentes para ver el documento', 'err');
   w.document.write(html.replace('</h1>', '</h1><div class="bar"><label style="margin-right:8px">📅 Fecha del documento <input type="date" id="fdoc"></label><button onclick="print()">🖨️ Imprimir o PDF</button><button id="bw">📝 Descargar Word</button></div>'));
   w.document.close();
+  // Logos en todas las hojas (cabecera que se repite) y tablas sin partir de mala manera
+  w.document.querySelectorAll('.marco>tbody>tr>td table').forEach(t => {
+    const r0 = t.rows[0]; if (r0 && r0.querySelector('th') && !t.tHead) t.createTHead().appendChild(r0);
+    if (t.rows.length <= 8) { t.style.breakInside = 'avoid'; t.style.pageBreakInside = 'avoid'; }
+  });
   const lugares = [...w.document.querySelectorAll('p')].filter(p => /^\s*En\s+Santa Fe,\s*a/.test(p.textContent)), orig = lugares.map(p => p.innerHTML);
   let nuevo = null;
   w.document.getElementById('fdoc').onchange = e => { const v = e.target.value, txt = v ? 'En Santa Fe, a ' + esc(fLarga(v)) + '.' : '';
@@ -229,8 +234,8 @@ function abrirAnexo(titulo, paginas) {
     '.logos{display:block;width:78%;margin:0 auto 14px}h1{font-size:10.5pt;text-align:center;font-weight:700;margin:0 0 14px;line-height:1.35}' +
     'table{width:100%;border-collapse:collapse;margin:0 0 14px}td,th{border:1px solid #000;padding:2px 5px;vertical-align:top;text-align:left;font-size:10pt}th,.et{background:#d9d9d9;font-weight:700}th{text-align:center;vertical-align:middle}' +
     '.alto td{height:24px}.muyalto td{height:58px}.c{text-align:center}.b{font-weight:700}.nota{font-weight:700;font-style:italic;margin:6px 0 18px}.lugar{text-align:center;margin:14px 0 34px}.firma{text-align:center;line-height:1.3}' +
-    '.bar{text-align:center;padding:10px;background:#fff}.bar button{font-size:15px;padding:8px 14px;margin:0 4px;cursor:pointer}@media print{body{background:#fff}.pag{margin:0;width:auto;min-height:0;padding:14mm 16mm;-webkit-box-decoration-break:clone;box-decoration-break:clone}.bar{display:none}}';
-  const cuerpo = paginas.map(p => '<div class="pag"><img class="logos" src="' + logo + '" alt="Cofinanciado por la Unión Europea · Ministerio de Trabajo y Economía Social · Fondos Europeos · Junta de Andalucía, Consejería de Educación">' + p + '</div>').join('');
+    '.bar{text-align:center;padding:10px;background:#fff}.bar button{font-size:15px;padding:8px 14px;margin:0 4px;cursor:pointer}table.marco{margin:0;border:0}.marco>thead>tr>td,.marco>tbody>tr>td{border:0;padding:0;font-size:10.5pt}.marco>thead{display:table-header-group}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}h1,p.b{break-after:avoid;page-break-after:avoid}.firma{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}@media print{@page{size:A4;margin:12mm 16mm}body{background:#fff}.pag{margin:0;width:auto;min-height:0;padding:0}.bar{display:none}}';
+  const cuerpo = paginas.map(p => '<div class="pag"><table class="marco"><thead><tr><td><img class="logos" src="' + logo + '" alt="Cofinanciado por la Unión Europea · Ministerio de Trabajo y Economía Social · Fondos Europeos · Junta de Andalucía, Consejería de Educación"></td></tr></thead><tbody><tr><td>' + p + '</td></tr></tbody></table></div>').join('');
   const html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>' + esc(titulo) + '</title><link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;700&display=swap" rel="stylesheet"><style>' + css + '</style></head><body>' + cuerpo + '</body></html>';
   const w = window.open('', '_blank');
   if (!w) return toast('Permite las ventanas emergentes para ver el documento', 'err');
