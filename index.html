@@ -200,12 +200,14 @@ body.mon.apt #nav button[data-s=apertura]{display:inline-block}
 <dialog id="dlg"><div id="dlgIn"></div></dialog>
 <dialog id="novedades">
   <h2>🆕 Novedades</h2>
-  <p>📦 <b>Documentos de todos los cursos de golpe</b>: en Acompañamiento, el botón «Documentos de todos los cursos» descarga en PDF el acta de selección, la programación y, si quieres, las autorizaciones, separados por cursos y listos para enviar a firmar.</p>
+  <p>🍽️ <b>Comedor por faltas</b>: las monitoras marcan solo a quien no viene; la app lo convierte en usos para Séneca.</p>
+  <p>📤 <b>Enviar nombres a las monitoras</b>: en Acompañamiento, el botón «Enviar nombres a las monitoras» crea un archivo con su alumnado (sin los dados de baja) para mandarlo por WhatsApp o Gmail. Ellas lo cargan en la app y les salen los nombres.</p>
   <div class="pie"><button class="btn" onclick="this.closest('dialog').close()">Entendido</button></div>
 </dialog>
 <dialog id="novMon">
   <h2>👋 Novedades</h2>
-  <p>🗓️ <b>Plan de Apertura, por mes</b>: las fechas y los nombres se quedan fijos al bajar, para saber siempre qué casilla es de qué día.</p>
+  <p>🍽️ <b>Comedor: marca solo a quien NO viene</b>. El resto cuenta como que ha comido. En el aula matinal se sigue marcando a quien viene.</p>
+  <p>📥 <b>Cargar nombres</b>: cuando coordinación te mande por WhatsApp o Gmail el archivo de tu alumnado, descárgalo, pulsa «📥 Cargar nombres» y elígelo. Te salen los nombres completos.</p>
   <div class="pie"><button class="btn" onclick="this.closest('dialog').close()">Entendido</button></div>
 </dialog>
 <div id="toast"></div>
@@ -226,6 +228,7 @@ body.mon.apt #nav button[data-s=apertura]{display:inline-block}
 <script src="app9.js"></script>
 <script src="app10.js"></script>
 <script src="app11.js"></script>
+<script src="app12.js"></script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
 </html>

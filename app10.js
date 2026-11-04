@@ -14,6 +14,8 @@ const puedeApt = () => !esMon() || !!(PERFILES[PERFIL] || {}).apertura;
 const AKEY = s => 'programas-nombres-apertura-' + s;
 const nomsApt = s => { try { return JSON.parse(localStorage.getItem(AKEY(s)) || '{}'); } catch (e) { return {}; } };
 const aptDe = s => ((D.apertura || {})[s]) || {};
+const FALTA = () => srvSel === 'comedor';   // en el comedor se marca la NO asistencia; se guarda igualmente como usos
+const baseDia = f => { const d = (aptDe(srvSel).dias || {})[f] || {}; if (d._ok || !FALTA()) return Object.assign({}, d); const r = {}; aluApt(srvSel).forEach(([aid, a]) => { if (activo(a, f)) r[aid] = true; }); return r; };
 const ordApt = n => String(n || '').split(',').map(x => x.trim()).join('\u0001');
 const aluApt = s => Object.entries(aptDe(s).alumnos || {}).map(([aid, a]) => [aid, a, nomsApt(s)[aid] || '']).sort((x, y) => ordApt(x[2] || x[1].siglas).localeCompare(ordApt(y[2] || y[1].siglas), 'es', { sensitivity: 'base' }));
 const activo = (a, f) => !a.baja || f < a.baja;   // de baja desde esa fecha: deja de salir en la lista
@@ -37,6 +39,14 @@ RENDER.apertura = function () {
   if (!A.length) h += '<div class="aviso">Todavía no hay alumnado en ' + SRV[srvSel].n.toLowerCase() + '.' + (esMon() ? ' Avisa a Víctor.' : ' Pégalo abajo desde la lista de Séneca.') + '</div>';
   else {
     const n = A.filter(([aid]) => dia[aid]).length;
+    if (FALTA()) h += '<p class="small" style="margin-bottom:8px">' + (pasado ? '✔ Registrado: <b>' + n + '</b> de ' + A.length + ' han comido · <b style="color:var(--bad)">' + (A.length - n) + '</b> no han venido.' : '<span style="color:var(--bad);font-weight:800">Sin registrar todavía.</span>') + ' <b>Marca solo a quien NO ha venido</b>; el resto cuenta como que ha comido.</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><button class="btn" data-apt="todos" style="font-size:1rem;padding:12px 16px">' + (pasado ? '✅ Al final han venido todos' : '✅ Hoy han venido todos') + '</button></div>' +
+      '<div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">' + A.map(([aid, a, nm]) => {
+        const no = pasado && !dia[aid];
+        return '<button data-apt="toca" data-v="' + aid + '" style="text-align:left;padding:12px 14px;border-radius:14px;border:2px solid ' + (no ? 'var(--bad)' : 'var(--border)') + ';background:' + (no ? '#fdecec' : '#fff') + ';font-weight:800;font-size:1rem;color:var(--text);min-height:54px">' +
+          (no ? '❌ ' : '🍽️ ') + esc(nomVer(a, nm)) + (a.curso ? ' <small class="muted" style="font-weight:700">' + esc(a.curso) + '</small>' : '') + (no ? '<br><small style="color:var(--bad)">No ha venido</small>' : '') + '</button>';
+      }).join('') + '</div>';
+    else
     h += '<p class="small" style="margin-bottom:8px">' + (pasado ? '✔ Registrado: <b>' + n + '</b> de ' + A.length + ' han venido.' : '<span class="muted">Sin registrar todavía.</span>') + ' Marca a quien ha venido hoy: cada día que viene es un uso del servicio.</p>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><button class="btn" data-apt="todos" style="font-size:1rem;padding:12px 16px">✅ Han venido todos</button>' +
       '<button class="btn sec" data-apt="ninguno">Quitar a todos</button></div>' +
@@ -69,22 +79,25 @@ function rAptGrid(TODOS) {
   let h = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>🗓️ Mes:</b>' + sel + '</div>';
   if (!A.length) return h + '<div class="aviso">No hay alumnado en ' + SRV[srvSel].n.toLowerCase() + ' este mes.</div>';
   if (!F.length) return h + '<div class="aviso">Este mes no hay días lectivos.</div>';
-  h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a (cada día es un uso del servicio). Toca el número de un día para marcarlo o quitarlo a todos; «Todo» (al final de cada fila) marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
+  if (FALTA()) { const sinP = F.filter(f => f <= hoyIso() && !(dias[f] || {})._ok);
+    h += '<p class="small muted" style="margin-bottom:8px"><b>En el comedor se marcan las faltas:</b> pon ✔ solo el día que un alumno/a <b>NO</b> ha venido. Los días en amarillo están sin pasar; toca el número del día para darlo por pasado (vinieron todos). «Usos» cuenta los días que ha comido. Se guarda solo.</p>' +
+      (sinP.length ? '<div class="aviso">Días sin pasar: <b>' + fmtSen(sinP.map(f => +f.slice(8))) + '</b> <button type="button" class="btn sec peq" data-apt="sinpasar">✅ En esos días vinieron todos</button></div>' : ''); }
+  else h += '<p class="small muted" style="margin-bottom:8px">Marca los días que ha venido cada alumno/a (cada día es un uso del servicio). Toca el número de un día para marcarlo o quitarlo a todos; «Todo» (al final de cada fila) marca o quita el mes entero de ese alumno/a. Se guarda solo.</p>';
   setTimeout(() => { const g = $('gridApt'); if (g) { g.scrollLeft = gridX; g.scrollTop = gridY; } }, 0);
   h += '<style>#gridApt{max-height:72vh;overflow:auto;border:1px solid var(--border);border-radius:12px}#gridApt th{position:sticky;top:0;background:#eef3fb;z-index:2;box-shadow:0 1px 0 var(--border)}#gridApt th:first-child{left:0;z-index:3}#gridApt tr:nth-child(even) td{background:#f7f9fd}#gridApt td:first-child{background:#fff}</style>' +
     '<div class="tabla" id="gridApt" onscroll="gridX=this.scrollLeft;gridY=this.scrollTop"><table style="font-size:.85rem"><tr><th>Alumno/a</th>' +
-    F.map(f => '<th class="c"><button type="button" class="chip" data-apt="col" data-v="' + f + '" style="padding:2px 7px" title="' + esc(fechaCorta(f)) + '">' + +f.slice(8) + '</button><br><small class="muted">' + 'DLMXJVS'[new Date(f + 'T12:00').getDay()] + '</small></th>').join('') + '<th>Usos</th><th></th></tr>' +
+    F.map(f => '<th class="c"><button type="button" class="chip" data-apt="col" data-v="' + f + '" style="padding:2px 7px' + (FALTA() && f <= hoyIso() && !(dias[f] || {})._ok ? ';background:#fff3c4;border-color:#e0b100' : '') + '" title="' + esc(fechaCorta(f)) + '">' + +f.slice(8) + '</button><br><small class="muted">' + 'DLMXJVS'[new Date(f + 'T12:00').getDay()] + '</small></th>').join('') + '<th>Usos</th><th></th></tr>' +
     A.map(([aid, a, nm]) => {
       const vale = f => activo(a, f), n = F.filter(f => (dias[f] || {})[aid]).length;
       return '<tr><td style="position:sticky;left:0;z-index:1;min-width:120px;max-width:150px;font-size:.8rem;line-height:1.2"><b>' + esc(nomVer(a, nm)) + '</b>' + (a.baja ? ' <small class="muted">baja ' + +a.baja.slice(8) + '/' + +a.baja.slice(5, 7) + '</small>' : '') + '</td>' +
-        F.map(f => '<td class="c" title="' + esc(fechaCorta(f)) + '"><input type="checkbox" data-aptc="' + aid + '|' + f + '"' + ((dias[f] || {})[aid] ? ' checked' : '') + (vale(f) ? '' : ' disabled') + ' style="width:20px;height:20px"></td>').join('') +
+        F.map(f => '<td class="c" title="' + esc(fechaCorta(f)) + '"><input type="checkbox" data-aptc="' + aid + '|' + f + '"' + ((FALTA() ? (dias[f] || {})._ok && !(dias[f] || {})[aid] : (dias[f] || {})[aid]) ? ' checked' : '') + (vale(f) ? '' : ' disabled') + ' style="width:20px;height:20px"></td>').join('') +
         '<td class="c"><b>' + n + '</b></td><td><button type="button" class="btn sec peq" data-apt="fila" data-v="' + aid + '">Todo</button></td></tr>';
     }).join('') + '</table></div>';
   return h;
 }
 function marcarMes(cambios) {   // cambios: [[fecha, aid, bool], …]
   const D2 = aptDe(srvSel).dias || {}, porDia = {};
-  cambios.forEach(([f, aid, v]) => { (porDia[f] = porDia[f] || Object.assign({}, D2[f] || {}))[aid] = v; });
+  cambios.forEach(([f, aid, v]) => { (porDia[f] = porDia[f] || baseDia(f))[aid] = v; });
   Object.entries(porDia).forEach(([f, d]) => { d._ok = true; Object.keys(d).forEach(k => { if (!d[k]) delete d[k]; }); guardar('apertura/' + srvSel + '/dias/' + f, d); });
   render();
 }
@@ -127,7 +140,7 @@ function pdfUsos() {
   abrirDoc('Usos del servicio de ' + SRV[srvSel].n.toLowerCase() + ' · ' + mesN, cuerpo, 'APT');
 }
 function guardarDia(cambios) {
-  const base = 'apertura/' + srvSel + '/dias/' + fechaApt, dia = Object.assign({}, (aptDe(srvSel).dias || {})[fechaApt] || {}, cambios, { _ok: true });
+  const base = 'apertura/' + srvSel + '/dias/' + fechaApt, dia = Object.assign(baseDia(fechaApt), cambios, { _ok: true });
   Object.keys(dia).forEach(k => { if (!dia[k]) delete dia[k]; });
   guardar(base, dia); render();
 }
@@ -177,10 +190,11 @@ document.addEventListener('click', e => {
     case 'srv': srvSel = v; render(); break;
     case 'pdf': pdfUsos(); break;
     case 'modo': modoApt = v; render(); break;
-    case 'col': { const T = aluApt(srvSel).filter(([, a]) => activo(a, v)), d = (aptDe(srvSel).dias || {})[v] || {}, on = !T.every(([aid]) => d[aid]); marcarMes(T.map(([aid]) => [v, aid, on])); break; }
-    case 'fila': { const al = aluApt(srvSel).find(([x]) => x === v); if (!al) break; const F = diasMesApt(mesApt).filter(f => activo(al[1], f) && f <= hoyIso()), dd = aptDe(srvSel).dias || {}, on = !F.every(f => (dd[f] || {})[v]); marcarMes(F.map(f => [f, v, on])); break; }
+    case 'col': if (FALTA()) { const T = aluApt(srvSel).filter(([, a]) => activo(a, v)); marcarMes(T.map(([aid]) => [v, aid, true])); toast('Día pasado: vinieron todos'); break; } { const T = aluApt(srvSel).filter(([, a]) => activo(a, v)), d = (aptDe(srvSel).dias || {})[v] || {}, on = !T.every(([aid]) => d[aid]); marcarMes(T.map(([aid]) => [v, aid, on])); break; }
+    case 'fila': { const al = aluApt(srvSel).find(([x]) => x === v); if (!al) break; const F = diasMesApt(mesApt).filter(f => activo(al[1], f) && f <= hoyIso()), dd = aptDe(srvSel).dias || {}, on = FALTA() ? F.some(f => (dd[f] || {})._ok && !(dd[f] || {})[v]) : !F.every(f => (dd[f] || {})[v]); marcarMes(F.map(f => [f, v, on])); break; }
     case 'hoy': fechaApt = hoyIso(); render(); break;
-    case 'toca': { const dia = (aptDe(srvSel).dias || {})[fechaApt] || {}; guardarDia({ [v]: !dia[v] }); break; }
+    case 'toca': { const dia = baseDia(fechaApt); guardarDia({ [v]: !dia[v] }); break; }
+    case 'sinpasar': { const c = []; diasMesApt(mesApt).filter(f => f <= hoyIso() && !((aptDe(srvSel).dias || {})[f] || {})._ok).forEach(f => aluApt(srvSel).forEach(([aid, a]) => { if (activo(a, f)) c.push([f, aid, true]); })); marcarMes(c); toast('Días pasados'); break; }
     case 'todos': { const c = {}; A.forEach(([aid]) => c[aid] = true); guardarDia(c); toast('Han venido todos'); break; }
     case 'ninguno': { const c = {}; A.forEach(([aid]) => c[aid] = false); guardarDia(c); break; }
     case 'pegar': dlgPegarApt(); break;
@@ -198,7 +212,7 @@ document.addEventListener('click', e => {
   }
 });
 document.addEventListener('change', e => {
-  if (e.target.dataset && e.target.dataset.aptc) { const [aid, f] = e.target.dataset.aptc.split('|'); marcarMes([[f, aid, e.target.checked]]); return; }
+  if (e.target.dataset && e.target.dataset.aptc) { const [aid, f] = e.target.dataset.aptc.split('|'); marcarMes([[f, aid, FALTA() ? !e.target.checked : e.target.checked]]); return; }
   if (e.target.id === 'fechaApt' && e.target.value) { fechaApt = e.target.value; render(); }
   if (e.target.id === 'mesApt') { mesApt = e.target.value; render(); }
 });
