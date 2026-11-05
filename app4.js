@@ -78,12 +78,13 @@ function dlgRellenar() {
   const X = typeof asisDe === 'function' ? asisDe(grupoSel, mes) : null;
   if (X && X.doc) Object.keys(R.dias).forEach(f => { const x = R.dias[f], d = +f.slice(8); if (x.mano) return;
     x.dada = X.doc.includes(d); x.aus = x.dada ? A.filter(([aid]) => !((X.alu || {})[aid] || []).includes(d)).map(([aid]) => aid) : []; });
+  try { localStorage.setItem(FKEY(grupoSel, mes), JSON.stringify(R)); } catch (e) { }
   const fechas = Object.keys(R.dias).sort();
   $('dlgIn').innerHTML = '<h2>✍️ ' + esc(g.nombre) + ' · ' + esc(MESES[+mes.slice(5) - 1]) + '</h2><p class="small muted">Marca las sesiones que diste y quién faltó. ' + (X && X.doc ? '<b>Ya viene relleno con la «Asistencia del mes»</b>; revísalo y firma. ' : '') + 'Se guarda en este móvil u ordenador.</p>' +
     '<div class="tabla"><table><tr><th>Día</th><th>¿Se dio?</th><th>Faltan</th><th>Observaciones</th></tr>' + fechas.map(f => { const x = R.dias[f], d = new Date(f + 'T12:00'); return '<tr><td><b>' + DSEM[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</b></td><td><input type="checkbox" class="chk" data-rd="' + f + '"' + (x.dada ? ' checked' : '') + '></td><td>' + A.map(([aid, a]) => '<button type="button" class="chip' + (x.aus.includes(aid) ? ' on' : '') + '" data-ra="' + f + '|' + aid + '" style="padding:3px 8px;margin:1px">' + esc(a.siglas) + '</button>').join('') + '</td><td><input data-ro="' + f + '" value="' + esc(x.obs) + '" style="padding:4px"></td></tr>'; }).join('') + '</table></div>' +
     '<label>Tu firma (con el dedo o el ratón)</label><canvas id="firmaCv" width="560" height="150" style="width:100%;max-width:560px;height:150px;border:1px dashed var(--border);border-radius:10px;background:#fff;touch-action:none"></canvas>' +
     '<div><button type="button" class="btn sec peq" id="firmaBorrar">Borrar firma</button></div>' +
-    '<div class="pie"><button class="btn sec" id="rlC">Cerrar</button><button class="btn sec" id="rlXII">📄 Anexo XII firmado</button><button class="btn" id="rlX">📄 Anexo X firmado</button></div>';
+    '<div class="pie"><button class="btn sec" id="rlC">Cerrar</button><button class="btn sec" id="rlXII">📄 Ver Anexo XII</button><button class="btn sec" id="rlX">📄 Ver Anexo X</button><button class="btn" id="rlEnv" style="background:#25d366">📲 Enviar a Víctor (WhatsApp)</button></div>';
   $('dlg').showModal();
   const cv = $('firmaCv'), cx = cv.getContext('2d'); cx.lineWidth = 2.2; cx.lineCap = 'round'; cx.strokeStyle = '#1a237e';
   if (R.firma) { const im = new Image(); im.onload = () => cx.drawImage(im, 0, 0); im.src = R.firma; }
@@ -118,8 +119,8 @@ function rHojasMon(g, A, selMes) {
   const prev = diasPrevistos(g, mesResumen), R = rellenoMon(grupoSel, mesResumen), dadas = R ? Object.values(R.dias).filter(x => x.dada).length : 0;
   return '<div class="card"><div class="card-h"><h2>📄 Hojas del mes</h2>' + selMes + '</div>' +
     '<p class="small">Días previstos de ' + esc(MESES[+mesResumen.slice(5) - 1]) + ' (' + esc(diasTxt(g)) + '): <b>' + (prev.map(f => +f.slice(8)).join(', ') || '—') + '</b></p>' +
-    '<div class="g2"><div class="card" style="box-shadow:none;margin:0"><b>✍️ En pantalla</b><p class="small muted">Marca los días y quién faltó, firma con el dedo y descarga el Anexo X y el XII ya firmados.' + (dadas ? ' Llevas ' + dadas + ' sesiones marcadas.' : '') + '</p><button class="btn" data-acc="rellenarMon">Rellenar y firmar</button></div>' +
-    '<div class="card" style="box-shadow:none;margin:0"><b>🖨️ En papel</b><p class="small muted">Imprime las hojas con las fechas ya puestas y fírmalas a mano.</p><button class="btn sec peq" data-acc="xPrev">Anexo X</button> <button class="btn sec peq" data-acc="xiiBlanco">Anexo XII</button> <button class="btn sec peq" data-acc="xiiiBlanco">Anexo XIII</button></div></div>' +
+    '<p class="small" style="margin:6px 0 10px">Elige <b>una</b> de las dos formas:</p><div class="g2"><div class="card" style="box-shadow:none;margin:0;border:2px solid var(--ok)"><b>📲 Automática (en el móvil) · recomendada</b><p class="small muted">Los Anexos X y XII salen ya rellenos con la asistencia del mes. Revisas, firmas con el dedo y se los <b>envías a Víctor por WhatsApp</b> con un botón.' + (dadas ? ' Llevas ' + dadas + ' sesiones marcadas.' : '') + '</p><button class="btn" data-acc="rellenarMon">Rellenar y firmar</button></div>' +
+    '<div class="card" style="box-shadow:none;margin:0"><b>🖨️ Manual (en papel)</b><p class="small muted">Imprime o fotocopia los anexos, rellénalos a mano (días, horas y faltas), fírmalos y entrégaselos a Víctor.</p><button class="btn sec peq" data-acc="xPrev">Anexo X</button> <button class="btn sec peq" data-acc="xiiBlanco">Anexo XII</button> <button class="btn sec peq" data-acc="xiiiBlanco">Anexo XIII</button></div></div>' +
     '<p class="small muted">Entrega las hojas a dirección a final de mes. Si una sesión no se da, no se recupera.</p></div>';
 }
 

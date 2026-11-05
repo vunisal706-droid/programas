@@ -42,7 +42,33 @@ dlgRellenar = function () {
   const b = $('firmaBorrar'); if (b) b.parentElement.remove();
   const p = document.createElement('p'); p.className = 'small muted'; p.style.marginTop = '8px'; p.textContent = 'Al pulsar cada anexo te pedirá que lo firmes con el dedo en ese momento.';
   const pie = $('dlgIn').querySelector('.pie'); if (pie) pie.before(p);
+  const env = $('rlEnv'); if (env) env.onclick = () => enviarAnexosMon(env);
 };
+// Firma una vez y prepara un PDF con los Anexos X y XII para mandarlo a Víctor por WhatsApp
+function enviarAnexosMon(btn) {
+  const gid = grupoSel, mes = mesResumen, g = D.grupos[gid], R = rellenoMon(gid, mes);
+  if (!R || !Object.values(R.dias).some(x => x.dada)) return toast('Marca al menos un día que se dio la sesión', 'err');
+  firmarAhora('Anexos X y XII · ' + g.nombre + ' · ' + MESES[+mes.slice(5) - 1], async url => {
+    const R2 = Object.assign({}, R, { firma: url }), t0 = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Preparando el PDF…';
+    try {
+      const blob = await window.anexosAPdf([() => _docXFirmado(gid, mes, R2), () => _docXIIFirmado(gid, mes, R2)]);
+      if (!blob) throw new Error('sin documento');
+      const mesN = MESES[+mes.slice(5) - 1], nombre = (g.nombre + ' - Anexos X y XII - ' + mesN + ' ' + mes.slice(0, 4)).replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+      const file = new File([blob], nombre, { type: 'application/pdf' }), txt = 'Hola, Víctor. Te mando los Anexos X y XII de ' + g.nombre + ' (' + mesN + '), rellenos y firmados.';
+      btn.disabled = false;
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // Compartir necesita un toque nuevo después de preparar el PDF
+        btn.textContent = '📲 Pulsa aquí: enviar por WhatsApp';
+        btn.onclick = async () => { try { await navigator.share({ files: [file], text: txt }); toast('✅ Elige WhatsApp y el chat de Víctor'); } catch (e) { if (e.name !== 'AbortError') toast('No se ha podido compartir', 'err'); } btn.textContent = t0; btn.onclick = () => enviarAnexosMon(btn); };
+        return;
+      }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+      window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+      toast('PDF descargado: adjúntalo en WhatsApp (📎) en el chat de Víctor');
+    } catch (e) { console.warn(e); toast('No se ha podido preparar el PDF. Usa «Ver Anexo» e imprímelo en PDF.', 'err'); }
+    btn.disabled = false; if (btn.textContent.startsWith('⏳')) btn.textContent = t0;
+  });
+}
 
 // Borra las firmas guardadas de antes (en el dispositivo y en la nube)
 function limpiarFirmas() {

@@ -142,4 +142,11 @@
     salidas.forEach(([n, b]) => zip.file(n, b));
     bajar(await zip.generateAsync({ type: 'blob' }), 'PROA Acompañamiento - documentos para firmar ' + CURSO + '.zip');
   }
+  // Para otras partes de la app: convertir en PDF lo que abre abrirAnexo
+  window.anexosAPdf = async function (fns) {
+    for (const s of LIBS.slice(0, 2)) await cargarScript(s);
+    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true }); let primera = true;
+    for (const fn of fns) { const fr = await capturar(fn); if (!fr) continue; try { await hojasAPdf(fr, pdf, primera); primera = false; } finally { fr.remove(); } }
+    return primera ? null : pdf.output('blob');
+  };
 })();
