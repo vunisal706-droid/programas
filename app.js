@@ -391,15 +391,12 @@ async function cargarReunionesPrevistas() {
   // Reunión informativa con las familias de cada grupo
   G.forEach(([gid, g]) => add({ tipo: 'familia', fecha: y + '-11-05', hora: '16:00', mod: 'Presencial', grupo: gid, asistentes: 'Familias del alumnado de ' + g.nombre + ', ' + (g.docente || 'monitor/a') + ' y coordinación del PROA',
     acuerdos: '1. Presentación del Acompañamiento Escolar (PROA Andalucía), cofinanciado por el FSE+.\n2. Días y horario: ' + (g.horario || '') + '. Asistencia, puntualidad y recogida.\n3. Firma de la autorización familiar (Anexo VI) y teléfonos de contacto.\n4. Justificación de faltas (Anexo XIII) y bajas (Anexo VIII).\n5. Ruegos y preguntas.' }));
-  // Coordinación ZTS: 4.º lunes lectivo de cada mes, de 17:00 a 18:00
-  for (let m = 10; m <= 17; m++) {
-    const mm = ((m - 1) % 12), yy = m > 11 ? y + 1 : y; let d = new Date(yy, mm, 1, 12);
-    const f4 = typeof cuartoLunes === 'function' ? cuartoLunes(iso(d).slice(0, 7)) : null;
-    if (f4) d = new Date(f4 + 'T12:00'); else while (d.getDay() !== 1 || sinC(iso(d))) d.setDate(d.getDate() + 1);
-    if (iso(d) < hoyIso()) continue;
-    add({ tipo: 'zts', fecha: iso(d), hora: '17:00', horaFin: '18:00', mod: 'Presencial', asistentes: typeof ZTS_ASIST === 'string' ? ZTS_ASIST : 'Equipo directivo y profesorado de apoyo ZTS',
-      acuerdos: '1. Seguimiento de los desdobles de Lengua y Matemáticas en 2.º y 3.º.\n2. Absentismo: casos del mes y llamadas a las familias.\n3. Alumnado recién llegado y plan de acogida.\n4. Seguimiento del Plan de Actuación ZTS.\n5. Acuerdos.' });
-  }
+  // Coordinación ZTS: una vez al trimestre (noviembre, febrero y mayo), 4.º lunes lectivo, de 17:00 a 18:00
+  (typeof ZTS_MESES !== 'undefined' ? ZTS_MESES : []).forEach(([m, t]) => {
+    const f = cuartoLunes((m >= 9 ? y : y + 1) + '-' + pad(m)); if (!f || f < hoyIso()) return;
+    add({ tipo: 'zts', fecha: f, hora: '17:00', horaFin: '18:00', mod: 'Presencial', asistentes: ZTS_ASIST,
+      acuerdos: 'Coordinación ZTS del ' + t + '.\n1. Seguimiento de los desdobles de Lengua y Matemáticas en 2.º y 3.º.\n2. Absentismo: casos del trimestre y llamadas a las familias.\n3. Alumnado recién llegado y plan de acogida.\n4. Seguimiento del Plan de Actuación ZTS.\n5. Acuerdos.' });
+  });
   // Comisiones de seguimiento del PROA+ (mínimo dos al año)
   [[y + '-12-14', '1.ª', 'de la 1.ª evaluación'], [(y + 1) + '-05-17', '2.ª', 'de la 2.ª evaluación y previsión de la 3.ª']].forEach(([f, n, ev]) => add({ tipo: 'comision', fecha: f, hora: '13:00', mod: 'Presencial', asistentes: 'Equipo directivo, coordinación del PROA+ y tutores/as del alumnado participante',
     acuerdos: n + ' comisión de seguimiento del PROA+ Transfórmate (modelo nº 12).\n1. Seguimiento del PEM y de las 10 actividades palanca.\n2. Datos de los indicadores ' + ev + '.\n3. Ejecución económica de la dotación.\n4. Dificultades y propuestas de mejora.\n5. Acuerdos.' }));
