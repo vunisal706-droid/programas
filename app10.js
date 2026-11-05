@@ -5,7 +5,7 @@
 const SRV = { comedor: { n: 'Comedor', e: '🍽️' }, matinal: { n: 'Aula matinal', e: '☀️' } };
 let gridX = 0, gridY = 0, modoApt = 'dia', srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
 PERFILES.sandra.apertura = true;
-PERFILES.mercedes = { nombre: 'Mercedes', emoji: '🧑‍🍳', idea: 'apt.mercedes', rol: 'Monitora (Comedor y Aula matinal)', mon: true, apertura: true, soloApt: true, prog: [] };
+PERFILES.mercedes = { nombre: 'Mercedes', emoji: '🧑‍🍳', idea: 'proa.mercedes', rol: 'Monitora (Comedor y Aula matinal)', mon: true, apertura: true, soloApt: true, prog: [] };
 // Plan de Apertura como opción más en la pantalla de entrada
 PROG.APT = { n: 'Plan de Apertura', cls: 'APT', e: '🏫' }; PROG_DESC.APT = 'Usos del comedor y del aula matinal';
 ['victor', 'maria', 'encarna', 'sandra', 'mercedes'].forEach(k => PERFILES[k].prog.push('APT'));
