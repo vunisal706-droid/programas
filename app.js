@@ -157,7 +157,7 @@ function pintarCursos() {
   $('selCurso').innerHTML = [i - 1, i, i + 1].map(y => { const c = y + '-' + String(y + 1).slice(2); return '<option value="' + c + '"' + (c === CURSO ? ' selected' : '') + '>' + y + '/' + String(y + 1).slice(2) + '</option>'; }).join('');
   $('selCurso').onchange = () => { CURSO = $('selCurso').value; conectar(); };
 }
-function novedades() { const K = esMon() ? 'programas-nov-mon-v21' : 'programas-nov-v44'; const dlgId = esMon() ? 'novMon' : 'novedades'; try { if (localStorage.getItem(K)) return; localStorage.setItem(K, 1); } catch (e) { } setTimeout(() => { try { $(dlgId).showModal(); } catch (e) { } }, 500); }
+function novedades() { const K = esMon() ? 'programas-nov-mon-v21' : 'programas-nov-v45'; const dlgId = esMon() ? 'novMon' : 'novedades'; try { if (localStorage.getItem(K)) return; localStorage.setItem(K, 1); } catch (e) { } setTimeout(() => { try { $(dlgId).showModal(); } catch (e) { } }, 500); }
 
 // ─── Navegación ───
 $('nav').onclick = e => { const b = e.target.closest('button'); if (b) irA(b.dataset.s); };
@@ -391,12 +391,13 @@ async function cargarReunionesPrevistas() {
   // Reunión informativa con las familias de cada grupo
   G.forEach(([gid, g]) => add({ tipo: 'familia', fecha: y + '-11-05', hora: '16:00', mod: 'Presencial', grupo: gid, asistentes: 'Familias del alumnado de ' + g.nombre + ', ' + (g.docente || 'monitor/a') + ' y coordinación del PROA',
     acuerdos: '1. Presentación del Acompañamiento Escolar (PROA Andalucía), cofinanciado por el FSE+.\n2. Días y horario: ' + (g.horario || '') + '. Asistencia, puntualidad y recogida.\n3. Firma de la autorización familiar (Anexo VI) y teléfonos de contacto.\n4. Justificación de faltas (Anexo XIII) y bajas (Anexo VIII).\n5. Ruegos y preguntas.' }));
-  // Coordinación ZTS: primer lunes lectivo de cada mes
+  // Coordinación ZTS: 4.º lunes lectivo de cada mes, de 17:00 a 18:00
   for (let m = 10; m <= 17; m++) {
     const mm = ((m - 1) % 12), yy = m > 11 ? y + 1 : y; let d = new Date(yy, mm, 1, 12);
-    while (d.getDay() !== 1 || sinC(iso(d))) d.setDate(d.getDate() + 1);
+    const f4 = typeof cuartoLunes === 'function' ? cuartoLunes(iso(d).slice(0, 7)) : null;
+    if (f4) d = new Date(f4 + 'T12:00'); else while (d.getDay() !== 1 || sinC(iso(d))) d.setDate(d.getDate() + 1);
     if (iso(d) < hoyIso()) continue;
-    add({ tipo: 'zts', fecha: iso(d), hora: '13:00', mod: 'Presencial', asistentes: 'Equipo directivo y profesorado ZTS (Miriam N. Romero y Cristina Molina)',
+    add({ tipo: 'zts', fecha: iso(d), hora: '17:00', horaFin: '18:00', mod: 'Presencial', asistentes: typeof ZTS_ASIST === 'string' ? ZTS_ASIST : 'Equipo directivo y profesorado de apoyo ZTS',
       acuerdos: '1. Seguimiento de los desdobles de Lengua y Matemáticas en 2.º y 3.º.\n2. Absentismo: casos del mes y llamadas a las familias.\n3. Alumnado recién llegado y plan de acogida.\n4. Seguimiento del Plan de Actuación ZTS.\n5. Acuerdos.' });
   }
   // Comisiones de seguimiento del PROA+ (mínimo dos al año)
