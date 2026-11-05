@@ -74,8 +74,12 @@ function dlgRellenar() {
   const g = D.grupos[grupoSel], mes = mesResumen, A = Object.entries(g.alumnos || {}), prev = diasPrevistos(g, mes);
   const R = rellenoMon(grupoSel, mes) || { dias: {}, firma: localStorage.getItem('programas-firma-mia') || '' };
   prev.forEach(f => { if (!R.dias[f]) R.dias[f] = { dada: false, aus: [], obs: '' }; });
+  // Lo que ya se marcó en «Asistencia del mes» se copia aquí (días dados y quién faltó), sin pisar lo que se haya tocado a mano
+  const X = typeof asisDe === 'function' ? asisDe(grupoSel, mes) : null;
+  if (X && X.doc) Object.keys(R.dias).forEach(f => { const x = R.dias[f], d = +f.slice(8); if (x.mano) return;
+    x.dada = X.doc.includes(d); x.aus = x.dada ? A.filter(([aid]) => !((X.alu || {})[aid] || []).includes(d)).map(([aid]) => aid) : []; });
   const fechas = Object.keys(R.dias).sort();
-  $('dlgIn').innerHTML = '<h2>✍️ ' + esc(g.nombre) + ' · ' + esc(MESES[+mes.slice(5) - 1]) + '</h2><p class="small muted">Marca las sesiones que diste y quién faltó. Se guarda en este móvil u ordenador.</p>' +
+  $('dlgIn').innerHTML = '<h2>✍️ ' + esc(g.nombre) + ' · ' + esc(MESES[+mes.slice(5) - 1]) + '</h2><p class="small muted">Marca las sesiones que diste y quién faltó. ' + (X && X.doc ? '<b>Ya viene relleno con la «Asistencia del mes»</b>; revísalo y firma. ' : '') + 'Se guarda en este móvil u ordenador.</p>' +
     '<div class="tabla"><table><tr><th>Día</th><th>¿Se dio?</th><th>Faltan</th><th>Observaciones</th></tr>' + fechas.map(f => { const x = R.dias[f], d = new Date(f + 'T12:00'); return '<tr><td><b>' + DSEM[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</b></td><td><input type="checkbox" class="chk" data-rd="' + f + '"' + (x.dada ? ' checked' : '') + '></td><td>' + A.map(([aid, a]) => '<button type="button" class="chip' + (x.aus.includes(aid) ? ' on' : '') + '" data-ra="' + f + '|' + aid + '" style="padding:3px 8px;margin:1px">' + esc(a.siglas) + '</button>').join('') + '</td><td><input data-ro="' + f + '" value="' + esc(x.obs) + '" style="padding:4px"></td></tr>'; }).join('') + '</table></div>' +
     '<label>Tu firma (con el dedo o el ratón)</label><canvas id="firmaCv" width="560" height="150" style="width:100%;max-width:560px;height:150px;border:1px dashed var(--border);border-radius:10px;background:#fff;touch-action:none"></canvas>' +
     '<div><button type="button" class="btn sec peq" id="firmaBorrar">Borrar firma</button></div>' +
@@ -88,8 +92,8 @@ function dlgRellenar() {
   cv.addEventListener('pointerdown', ini); cv.addEventListener('pointermove', mov); window.addEventListener('pointerup', fin, { once: false });
   const guardarRelleno = () => { try { localStorage.setItem(FKEY(grupoSel, mes), JSON.stringify(R)); if (R.firma) localStorage.setItem('programas-firma-mia', R.firma); } catch (e) { } };
   $('firmaBorrar').onclick = () => { cx.clearRect(0, 0, cv.width, cv.height); R.firma = ''; guardarRelleno(); };
-  $('dlgIn').onclick = e => { const b = e.target.closest('[data-ra]'); if (!b) return; const [f, aid] = b.dataset.ra.split('|'), x = R.dias[f]; x.aus = x.aus.includes(aid) ? x.aus.filter(y => y !== aid) : x.aus.concat(aid); b.classList.toggle('on'); guardarRelleno(); };
-  $('dlgIn').onchange = e => { const t = e.target; if (t.dataset.rd) R.dias[t.dataset.rd].dada = t.checked; if (t.dataset.ro) R.dias[t.dataset.ro].obs = t.value; guardarRelleno(); };
+  $('dlgIn').onclick = e => { const b = e.target.closest('[data-ra]'); if (!b) return; const [f, aid] = b.dataset.ra.split('|'), x = R.dias[f]; x.aus = x.aus.includes(aid) ? x.aus.filter(y => y !== aid) : x.aus.concat(aid); x.mano = true; b.classList.toggle('on'); guardarRelleno(); };
+  $('dlgIn').onchange = e => { const t = e.target; if (t.dataset.rd) { R.dias[t.dataset.rd].dada = t.checked; R.dias[t.dataset.rd].mano = true; } if (t.dataset.ro) R.dias[t.dataset.ro].obs = t.value; guardarRelleno(); };
   $('rlC').onclick = () => $('dlg').close();
   $('rlX').onclick = () => docXFirmado(grupoSel, mes, R);
   $('rlXII').onclick = () => docXIIFirmado(grupoSel, mes, R);
