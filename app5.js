@@ -86,7 +86,7 @@ function rInformeXV(A, tri) {
   h += A.map(([aid, a]) => {
     const inf = ((((D.informes || {})[grupoSel] || {})[aid] || {})['t' + tri]) || {}, marc = Object.keys(inf.e || {}).length, total = S[0].length + S[1].length, hechas = PREG_XV.filter((_, i) => inf['q' + (i + 1)]).length;
     const ok = marc >= total && hechas === 5;
-    return '<details style="margin:10px 0"><summary>' + esc(a.siglas) + ' <span class="muted small">' + esc(a.curso || '') + ' · ' + (ok ? '✔ completo' : 'saberes ' + marc + '/' + total + ' · preguntas ' + hechas + '/5') + '</span></summary>' +
+    return '<details style="margin:10px 0"><summary>' + esc(nombreDe(grupoSel, aid, a)) + ' <span class="muted small">' + esc(a.curso || '') + ' · ' + (ok ? '✔ completo' : 'saberes ' + marc + '/' + total + ' · preguntas ' + hechas + '/5') + '</span></summary>' +
       (tri > 1 ? '<button type="button" class="btn sec peq" data-xvcopia="' + aid + '" style="margin-top:6px">📋 Copiar respuestas del trimestre anterior</button>' : '') +
       [1, 2].map(k => '<p class="small" style="margin-top:10px"><b>' + esc(AREAS_XV[k - 1]) + '</b></p>' + S[k - 1].map((c, i) => { const v = (inf.e || {})[k + '_' + i] || ''; return '<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;border-bottom:1px solid #edf1f7;padding:4px 0;flex-wrap:wrap"><span>' + esc(c) + '</span><span>' + [['C', 'Conseguido'], ['EP', 'En proceso'], ['SI', 'Sin iniciar']].map(([kk, t]) => '<button type="button" class="chip' + (v === kk ? ' on' : '') + '" data-xvest="' + aid + '|' + k + '_' + i + '|' + kk + '" style="padding:3px 8px;margin:1px;font-size:.78rem">' + t + '</button>').join('') + '</span></div>'; }).join('')).join('') +
       PREG_XV.map((q, i) => { const key = 'q' + (i + 1); return '<label>' + esc(q.charAt(0) + q.slice(1).toLowerCase()) + '</label><div>' + RESP_SUG[key].map(s => chip(s, 'data-xvfrase="' + aid + '|' + key + '"')).join('') + '</div><textarea rows="2" data-inf="' + aid + '" data-k="' + key + '">' + esc(inf[key] || '') + '</textarea>'; }).join('') +
@@ -111,7 +111,7 @@ function rProgEquipo(g) {
   return '<div class="card"><div class="card-h"><h2>📘 Programación</h2>' + (P ? '<button class="btn sec peq" data-acc="verProg">📄 Completa en PDF</button>' : '') + '</div>' +
     '<p class="small muted">Saberes básicos que se trabajan cada trimestre en ' + cursoNum(g) + '.º. Úsalos para preparar las sesiones.</p>' +
     [1, 2, 3].map(t => { const S = saberes(g, t); return '<details' + (t === tri ? ' open' : '') + '><summary>' + t + '.º trimestre' + (t === tri ? ' · ahora' : '') + '</summary><div class="g2"><div><b class="small">' + AREAS_XV[0] + '</b>' + lista(S[0]) + '</div><div><b class="small">' + AREAS_XV[1] + '</b>' + lista(S[1]) + '</div></div></details>'; }).join('') +
-    (P && P.ind && Object.keys(P.ind).length ? '<details><summary>Objetivos de cada alumno/a</summary><ul style="margin:4px 0 8px 20px">' + Object.entries(P.ind).map(([aid, t]) => '<li><b>' + esc(((g.alumnos || {})[aid] || {}).siglas || '') + ':</b> ' + esc(t) + '</li>').join('') + '</ul></details>' : '') + '</div>';
+    (P && P.ind && Object.keys(P.ind).length ? '<details><summary>Objetivos de cada alumno/a</summary><ul style="margin:4px 0 8px 20px">' + Object.entries(P.ind).map(([aid, t]) => '<li><b>' + esc((g.alumnos || {})[aid] ? nombreDe(grupoSel, aid, g.alumnos[aid]) : '') + ':</b> ' + esc(t) + '</li>').join('') + '</ul></details>' : '') + '</div>';
 }
 
 // ─── Reuniones quincenales: todas las fechas; al tocar una se entra a escribir en la reunión ───

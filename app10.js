@@ -36,7 +36,8 @@ RENDER.apertura = function () {
   h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px"><b>📅 Día:</b><input type="date" id="fechaApt" value="' + fechaApt + '" style="width:auto">' +
     (fechaApt !== hoyIso() ? '<button class="btn sec peq" data-apt="hoy">Hoy</button>' : '') + '</div>';
   if (!diaServicio(fechaApt)) h += '<div class="aviso">Ese día no hay servicio (fin de semana o día sin cole).</div>';
-  if (!A.length) h += '<div class="aviso">Todavía no hay alumnado en ' + SRV[srvSel].n.toLowerCase() + '.' + (esMon() ? ' Avisa a Víctor.' : ' Pégalo abajo desde la lista de Séneca.') + '</div>';
+  if (window.aptSinPermiso) h += '<div class="aviso" style="border-color:var(--bad)">⛔ La nube no deja leer el Plan de Apertura con este usuario. Avisa a Víctor (hay que dar permiso en Firebase).</div>';
+  else if (!A.length) h += '<div class="aviso">Todavía no hay alumnado en ' + SRV[srvSel].n.toLowerCase() + '.' + (esMon() ? ' Avisa a Víctor.' : ' Pégalo abajo desde la lista de Séneca.') + '</div>';
   else {
     const n = A.filter(([aid]) => dia[aid]).length;
     if (FALTA()) h += '<p class="small" style="margin-bottom:8px">' + (pasado ? '✔ Registrado: <b>' + n + '</b> de ' + A.length + ' han comido · <b style="color:var(--bad)">' + (A.length - n) + '</b> no han venido.' : '<span style="color:var(--bad);font-weight:800">Sin registrar todavía.</span>') + ' <b>Marca solo a quien NO ha venido</b>; el resto cuenta como que ha comido.</p>' +
@@ -223,7 +224,7 @@ conectarMon = function () {
   _conectarMon10();
   if (!puedeApt()) return;
   const r = db.ref(BASE + '/apertura'); refsMon.push(r);
-  r.on('value', s => { D.apertura = s.val() || {}; cachear(); if (!editando()) render(); }, e => { console.warn(e); toast('Sin permiso para el Plan de Apertura. Avisa a dirección.', 'err'); });
+  r.on('value', s => { window.aptSinPermiso = false; D.apertura = s.val() || {}; cachear(); if (!editando()) render(); }, e => { console.warn(e); window.aptSinPermiso = true; render(); toast('Sin permiso para el Plan de Apertura. Avisa a dirección.', 'err'); });
 };
 // Pestaña visible para Sandra
 const _abrir10 = abrir;

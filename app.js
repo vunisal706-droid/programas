@@ -157,7 +157,7 @@ function pintarCursos() {
   $('selCurso').innerHTML = [i - 1, i, i + 1].map(y => { const c = y + '-' + String(y + 1).slice(2); return '<option value="' + c + '"' + (c === CURSO ? ' selected' : '') + '>' + y + '/' + String(y + 1).slice(2) + '</option>'; }).join('');
   $('selCurso').onchange = () => { CURSO = $('selCurso').value; conectar(); };
 }
-function novedades() { const K = esMon() ? 'programas-nov-mon-v20' : 'programas-nov-v43'; const dlgId = esMon() ? 'novMon' : 'novedades'; try { if (localStorage.getItem(K)) return; localStorage.setItem(K, 1); } catch (e) { } setTimeout(() => { try { $(dlgId).showModal(); } catch (e) { } }, 500); }
+function novedades() { const K = esMon() ? 'programas-nov-mon-v21' : 'programas-nov-v43'; const dlgId = esMon() ? 'novMon' : 'novedades'; try { if (localStorage.getItem(K)) return; localStorage.setItem(K, 1); } catch (e) { } setTimeout(() => { try { $(dlgId).showModal(); } catch (e) { } }, 500); }
 
 // ─── Navegación ───
 $('nav').onclick = e => { const b = e.target.closest('button'); if (b) irA(b.dataset.s); };
@@ -254,7 +254,7 @@ function rAcomp() {
   h += '<div class="card"><div class="card-h"><div><h2>' + esc(g.nombre) + '</h2><p class="small muted">' + esc(ACT[g.act] || '') + ' · ' + (g.mod === 'A' ? 'Mentor/a (modalidad A)' : 'Profesorado (modalidad B)') + ' · ' + esc(g.docente || 'sin docente') + ' · ' + esc(g.horario || '') + '</p></div>' +
     (esMon() ? '' : '<div><button class="btn sec peq" data-acc="editarGrupo">✏️ Editar grupo</button> <button class="btn sec peq" data-acc="nuevoAlumno">＋ Alumno/a</button></div>') + '</div>' +
     (A.length ? '<div class="tabla"><table><tr><th>Alumno/a</th><th>Curso</th><th>Tutor/a</th><th></th></tr>' +
-      A.map(([aid, a]) => { return '<tr><td><b>' + esc(a.siglas) + '</b></td><td>' + esc(a.curso || '') + '</td><td>' + esc(a.tutor || '') + '</td><td>' + (esMon() ? '' : '<button class="btn sec peq" data-alumno="' + aid + '">✏️</button>') + '</td></tr>'; }).join('') + '</table></div>' :
+      A.map(([aid, a]) => { return '<tr><td><b>' + esc(nombreDe(grupoSel, aid, a)) + '</b>' + (nombreDe(grupoSel, aid, a) !== a.siglas ? ' <small class="muted">' + esc(a.siglas) + '</small>' : '') + '</td><td>' + esc(a.curso || '') + '</td><td>' + esc(a.tutor || '') + '</td><td>' + (esMon() ? '' : '<button class="btn sec peq" data-alumno="' + aid + '">✏️</button>') + '</td></tr>'; }).join('') + '</table></div>' :
       '<p class="muted">Añade el alumnado del grupo (solo siglas).</p>') + '</div>';
   // Mes de trabajo
   const meses = mesesProg();
