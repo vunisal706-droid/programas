@@ -5,9 +5,10 @@
 const SRV = { comedor: { n: 'Comedor', e: '🍽️' }, matinal: { n: 'Aula matinal', e: '☀️' } };
 let gridX = 0, gridY = 0, modoApt = 'dia', srvSel = 'comedor', fechaApt = hoyIso(), mesApt = hoyIso().slice(0, 7);
 PERFILES.sandra.apertura = true;
+PERFILES.mercedes = { nombre: 'Mercedes', emoji: '🧑‍🍳', idea: 'apt.mercedes', rol: 'Monitora (Comedor y Aula matinal)', mon: true, apertura: true, soloApt: true, prog: [] };
 // Plan de Apertura como opción más en la pantalla de entrada
 PROG.APT = { n: 'Plan de Apertura', cls: 'APT', e: '🏫' }; PROG_DESC.APT = 'Usos del comedor y del aula matinal';
-['victor', 'maria', 'encarna', 'sandra'].forEach(k => PERFILES[k].prog.push('APT'));
+['victor', 'maria', 'encarna', 'sandra', 'mercedes'].forEach(k => PERFILES[k].prog.push('APT'));
 pintarPerfiles();   // Sandra pasa lista del comedor y del aula matinal
 const puedeApt = () => !esMon() || !!(PERFILES[PERFIL] || {}).apertura;
 
@@ -221,7 +222,7 @@ document.addEventListener('change', e => {
 // Datos: los monitores con acceso también escuchan «apertura»
 const _conectarMon10 = conectarMon;
 conectarMon = function () {
-  _conectarMon10();
+  if ((PERFILES[PERFIL] || {}).soloApt) { refsMon.forEach(r => r.off()); refsMon = []; } else _conectarMon10();
   if (!puedeApt()) return;
   const r = db.ref(BASE + '/apertura'); refsMon.push(r);
   r.on('value', s => { window.aptSinPermiso = false; D.apertura = s.val() || {}; cachear(); if (!editando()) render(); }, e => { console.warn(e); window.aptSinPermiso = true; render(); toast('Sin permiso para el Plan de Apertura. Avisa a dirección.', 'err'); });
@@ -229,6 +230,7 @@ conectarMon = function () {
 // Pestaña visible para Sandra
 const _abrir10 = abrir;
 abrir = function (p) {
-  _abrir10(p); document.body.classList.toggle('apt', !!(PERFILES[p] || {}).apertura);
+  _abrir10(p); document.body.classList.toggle('apt', !!(PERFILES[p] || {}).apertura); document.body.classList.toggle('soloapt', !!(PERFILES[p] || {}).soloApt);
+  if ((PERFILES[p] || {}).soloApt && progAcc !== 'APT') { progAcc = 'APT'; }
   if (progAcc === 'APT' && puedeApt()) { if (esMon()) $('tituloApp').innerHTML = 'Plan de Apertura<small>Usos del servicio · ' + esc(PERFILES[p].nombre) + '</small>'; irA('apertura'); }
 };

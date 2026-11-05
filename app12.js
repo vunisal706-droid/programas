@@ -39,7 +39,7 @@
     const { total, sin } = faltan();
     return '<div class="card" style="border-left:5px solid ' + (sin ? '#e08a1e' : '#22a06b') + '"><div class="card-h"><div><h2>📲 Nombres en tus otros dispositivos</h2><p class="small muted">' +
       (sin ? '<b>En este dispositivo faltan ' + sin + ' de ' + total + ' nombres.</b> Desde el dispositivo donde los tienes, pulsa «Enviármelos» y aquí «Cargar nombres».' : 'Aquí tienes todos los nombres. Para llevarlos a tu móvil u otro ordenador: «Enviármelos» aquí y «Cargar nombres» allí.') +
-      '</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" data-env="yo">📤 Enviármelos</button><button class="btn' + (sin ? '' : ' sec') + '" data-env="cargar">📥 Cargar nombres</button></div></div></div>';
+      '</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" data-env="abrir">👥 A las monitoras</button><button class="btn sec" data-env="yo">📤 Enviármelos</button><button class="btn' + (sin ? '' : ' sec') + '" data-env="cargar">📥 Cargar nombres</button></div></div></div>';
   }
   async function enviarYo() {
     const { out, n } = paqueteYo(); if (!n) return toast('En este dispositivo no hay nombres. Hazlo desde donde los tengas.', 'err');
@@ -52,7 +52,7 @@
     const filas = MON().map(([k, p]) => { const { n, sin, bajas } = paquete(k);
       return '<label style="display:flex;gap:10px;align-items:center;margin:6px 0;padding:8px 10px;border:1px solid var(--border);border-radius:12px;font-weight:700"><input type="radio" name="envP" value="' + k + '" style="width:18px;height:18px"' + (k === 'sandra' ? ' checked' : '') + '> ' + esc(p.emoji + ' ' + p.nombre) +
         ' <span class="small muted" style="font-weight:400">· ' + n + ' nombres' + (sin ? ' · <span style="color:#b45309">⚠️ ' + sin + ' sin nombre</span>' : '') + (bajas ? ' · ' + bajas + ' de baja (no van)' : '') + '</span></label>'; }).join('');
-    $('dlgIn').innerHTML = '<h2>📤 Enviar nombres a una monitora</h2><p class="small muted">Se crea un archivo con los nombres completos de <b>su</b> alumnado (sus grupos' + (PERFILES.sandra && PERFILES.sandra.apertura ? ' y, a Sandra, el comedor y el aula matinal' : '') + '). <b>El alumnado dado de baja no va.</b> Los nombres no se suben a la nube: viajan solo en el archivo.</p>' + filas +
+    $('dlgIn').innerHTML = '<h2>📤 Enviar nombres a una monitora</h2><p class="small muted">Se crea un archivo con los nombres completos de <b>su</b> alumnado (sus grupos' + (PERFILES.sandra && PERFILES.sandra.apertura ? ' y, a quien lleve el comedor y el aula matinal, también esos' : '') + '). <b>El alumnado dado de baja no va.</b> Los nombres no se suben a la nube: viajan solo en el archivo.</p>' + filas +
       '<p class="small muted">En el móvil se abre la ventana de compartir para elegir <b>WhatsApp</b> o <b>Gmail</b>. Ella solo tiene que pulsar «📥 Cargar nombres» en la app y elegir el archivo.</p>' +
       '<div class="pie"><button class="btn sec" id="envC">Cancelar</button><button class="btn sec" id="envG">✉️ Gmail</button><button class="btn sec" id="envW">💬 WhatsApp</button><button class="btn" id="envOk">📲 Compartir</button></div>';
     $('dlg').showModal();

@@ -47,6 +47,6 @@ Los plazos (`plazos.js`) se copian de la Agenda del Equipo Directivo; las palanc
 Para que Sandra pueda pasar lista, añade dentro de `"cursos": { "$c": {` (junto a `"grupos"`, con su coma):
 
 ```json
-"apertura": { ".read": "auth != null && (auth.token.email == 'vunisal706@capitulaciones.local' || auth.token.email == 'mrodrod323@capitulaciones.local' || auth.token.email == 'emunrom369@capitulaciones.local' || auth.token.email == 'proa.sandra@capitulaciones.local')", ".write": "auth != null && (auth.token.email == 'vunisal706@capitulaciones.local' || auth.token.email == 'mrodrod323@capitulaciones.local' || auth.token.email == 'emunrom369@capitulaciones.local' || auth.token.email == 'proa.sandra@capitulaciones.local')" }
+"apertura": { ".read": "auth != null && (auth.token.email == 'vunisal706@capitulaciones.local' || auth.token.email == 'mrodrod323@capitulaciones.local' || auth.token.email == 'emunrom369@capitulaciones.local' || auth.token.email == 'proa.sandra@capitulaciones.local' || auth.token.email == 'apt.mercedes@capitulaciones.local')", ".write": "auth != null && (auth.token.email == 'vunisal706@capitulaciones.local' || auth.token.email == 'mrodrod323@capitulaciones.local' || auth.token.email == 'emunrom369@capitulaciones.local' || auth.token.email == 'proa.sandra@capitulaciones.local' || auth.token.email == 'apt.mercedes@capitulaciones.local')" }
 ```
 Datos: `apertura/<comedor|matinal>/alumnos` (solo siglas y curso) y `apertura/<servicio>/dias/<fecha>`. Los nombres completos solo en el dispositivo.
