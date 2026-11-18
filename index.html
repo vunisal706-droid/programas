@@ -201,7 +201,7 @@ body.soloapt #nav button[data-s=acomp]{display:none}
 <dialog id="dlg"><div id="dlgIn"></div></dialog>
 <dialog id="novedades">
   <h2>🆕 Novedades</h2>
-  <p>🌱 <b>Coordinación ZTS</b>: una reunión <b>por trimestre</b> (noviembre, febrero y mayo), el <b>4.º lunes lectivo, de 17:00 a 18:00</b>, con el equipo directivo y el profesorado de apoyo ZTS.</p>
+  <p>🧪 <b>Modo demostración</b>: en la pantalla de entrada hay un botón para ver la app con datos inventados y una guía que explica cada apartado. Sirve para enseñarla a otros centros; no toca los datos reales.</p>
   <div class="pie"><button class="btn" onclick="this.closest('dialog').close()">Entendido</button></div>
 </dialog>
 <dialog id="novMon">
@@ -216,6 +216,341 @@ body.soloapt #nav button[data-s=acomp]{display:none}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="plazos.js"></script>
 <script src="palancas.js"></script>
+<!-- DEMO-PRE -->
+<script>
+/* ══════════ MODO DEMOSTRACIÓN · kit común ══════════
+   Base de datos de mentira (en memoria, nada sale del navegador), banner y guía
+   explicativa con «?» junto a cada apartado. Cada app añade sus datos y su guía. */
+(function () {
+  const clon = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+  let _n = 0; const nuevoId = () => 'demo' + Date.now().toString(36) + (++_n);
+
+  /* ── Firestore (compat) en memoria ── */
+  function MockFS(semilla) {
+    const C = {}; Object.entries(semilla || {}).forEach(([c, docs]) => { C[c] = {}; Object.entries(docs).forEach(([id, d]) => C[c][id] = clon(d)); });
+    const col = n => (C[n] = C[n] || {});
+    const oyentes = [];
+    const avisar = () => oyentes.slice().forEach(f => { try { f(); } catch (e) {} });
+    const snapDoc = (c, id) => { const d = col(c)[id]; return { id, exists: d !== undefined, data: () => clon(d), get: k => (d || {})[k], ref: docRef(c, id) }; };
+    const valor = (o, campo) => campo.split('.').reduce((a, k) => a == null ? a : a[k], o);
+    function cumple(d, [campo, op, v]) {
+      const x = valor(d, campo);
+      switch (op) {
+        case '==': return x === v; case '!=': return x !== v; case '<': return x < v; case '<=': return x <= v;
+        case '>': return x > v; case '>=': return x >= v; case 'in': return (v || []).includes(x);
+        case 'array-contains': return Array.isArray(x) && x.includes(v);
+        case 'array-contains-any': return Array.isArray(x) && (v || []).some(y => x.includes(y));
+        default: return true;
+      }
+    }
+    function query(c, filtros, orden, limite) {
+      const q = {
+        where: (a, b, v) => query(c, filtros.concat([[a, b, v]]), orden, limite),
+        orderBy: (campo, dir) => query(c, filtros, orden.concat([[campo, dir]]), limite),
+        limit: n => query(c, filtros, orden, n), limitToLast: n => query(c, filtros, orden, -n),
+        get: async () => {
+          let docs = Object.keys(col(c)).filter(id => filtros.every(f => cumple(col(c)[id], f))).map(id => snapDoc(c, id));
+          orden.forEach(([campo, dir]) => docs.sort((a, b) => { const x = valor(a.data(), campo), y = valor(b.data(), campo); return (x > y ? 1 : x < y ? -1 : 0) * (dir === 'desc' ? -1 : 1); }));
+          if (limite > 0) docs = docs.slice(0, limite); else if (limite < 0) docs = docs.slice(limite);
+          return { docs, size: docs.length, empty: !docs.length, forEach: f => docs.forEach(f), docChanges: () => docs.map(d => ({ type: 'added', doc: d })) };
+        },
+        onSnapshot: (ok) => { const f = () => q.get().then(ok); oyentes.push(f); f(); return () => { const i = oyentes.indexOf(f); if (i >= 0) oyentes.splice(i, 1); }; }
+      };
+      if (c !== null) Object.assign(q, { doc: id => docRef(c, id || nuevoId()), add: async d => { const id = nuevoId(); col(c)[id] = clon(d); avisar(); return docRef(c, id); } });
+      return q;
+    }
+    function docRef(c, id) {
+      const r = {
+        id, path: c + '/' + id,
+        get: async () => snapDoc(c, id),
+        set: async (d, o) => { col(c)[id] = (o && o.merge) ? Object.assign(col(c)[id] || {}, clon(d)) : clon(d); avisar(); },
+        update: async d => { const cur = col(c)[id] = col(c)[id] || {}; Object.entries(d).forEach(([k, v]) => { if (k.includes('.')) { const p = k.split('.'); let o = cur; p.slice(0, -1).forEach(s => o = o[s] = o[s] || {}); o[p[p.length - 1]] = clon(v); } else cur[k] = clon(v); }); avisar(); },
+        delete: async () => { delete col(c)[id]; avisar(); },
+        onSnapshot: ok => { const f = () => ok(snapDoc(c, id)); oyentes.push(f); f(); return () => { const i = oyentes.indexOf(f); if (i >= 0) oyentes.splice(i, 1); }; },
+        collection: sub => query(c + '/' + id + '/' + sub, [], [], 0)
+      };
+      return r;
+    }
+    return {
+      collection: n => query(n, [], [], 0),
+      doc: p => { const i = p.lastIndexOf('/'); return docRef(p.slice(0, i), p.slice(i + 1)); },
+      batch: () => { const ops = []; const b = { set: (r, d, o) => (ops.push(() => r.set(d, o)), b), update: (r, d) => (ops.push(() => r.update(d)), b), delete: r => (ops.push(() => r.delete()), b), commit: async () => { for (const op of ops) await op(); } }; return b; },
+      runTransaction: async f => f({ get: r => r.get(), set: (r, d, o) => r.set(d, o), update: (r, d) => r.update(d), delete: r => r.delete() }),
+      enablePersistence: async () => {}, settings: () => {}, _datos: C
+    };
+  }
+
+  /* ── Realtime Database (compat) en memoria ── */
+  function MockRTDB(semilla) {
+    const raiz = { v: clon(semilla) || {} };
+    const oyentes = [];
+    const partes = p => String(p || '').split('/').filter(Boolean);
+    const leer = p => partes(p).reduce((o, k) => (o == null ? null : (o[k] === undefined ? null : o[k])), raiz.v);
+    const escribir = (p, v) => {
+      const ps = partes(p); if (!ps.length) { raiz.v = clon(v) || {}; return; }
+      let o = raiz.v; ps.slice(0, -1).forEach(k => { if (o[k] == null || typeof o[k] !== 'object') o[k] = {}; o = o[k]; });
+      if (v === null || v === undefined) delete o[ps[ps.length - 1]]; else o[ps[ps.length - 1]] = clon(v);
+    };
+    const avisar = () => oyentes.slice().forEach(f => { try { f(); } catch (e) {} });
+    function snap(p, v) {
+      const key = partes(p).pop() || null;
+      return {
+        key, val: () => clon(v), exists: () => v !== null && v !== undefined, exportVal: () => clon(v),
+        numChildren: () => (v && typeof v === 'object') ? Object.keys(v).length : 0,
+        hasChildren: () => !!(v && typeof v === 'object' && Object.keys(v).length),
+        hasChild: k => !!(v && typeof v === 'object' && v[k] !== undefined),
+        child: k => snap(p + '/' + k, (v && typeof v === 'object') ? (partes(k).reduce((o, x) => o == null ? null : o[x], v) ?? null) : null),
+        forEach: f => { if (v && typeof v === 'object') { for (const k of Object.keys(v)) { if (f(snap(p + '/' + k, v[k])) === true) return true; } } return false; },
+        ref: ref(p)
+      };
+    }
+    function ref(p, q) {
+      q = q || {};
+      const valorQ = () => {
+        let v = leer(p); if (!q.campo && !q.lim && !('igual' in q) && !q.porClave) return v;
+        if (!v || typeof v !== 'object') return v;
+        let ks = Object.keys(v);
+        const campo = k => q.campo === '$key' ? k : (q.campo === '$value' ? v[k] : (v[k] || {})[q.campo]);
+        if ('igual' in q) ks = ks.filter(k => campo(k) === q.igual);
+        if ('desde' in q) ks = ks.filter(k => campo(k) >= q.desde);
+        if ('hasta' in q) ks = ks.filter(k => campo(k) <= q.hasta);
+        if (q.campo) ks.sort((a, b) => { const x = campo(a), y = campo(b); return x > y ? 1 : x < y ? -1 : 0; });
+        if (q.lim > 0) ks = ks.slice(0, q.lim); else if (q.lim < 0) ks = ks.slice(q.lim);
+        const o = {}; ks.forEach(k => o[k] = v[k]); return o;
+      };
+      const r = {
+        key: partes(p).pop() || null, path: p,
+        child: k => ref(partes(p).concat(partes(k)).join('/')),
+        parent: null,
+        once: async (ev, ok) => { const s = snap(p, valorQ()); if (ok) ok(s); return s; },
+        get: async () => snap(p, valorQ()),
+        on: (ev, ok) => { const f = () => ok(snap(p, valorQ())); f.__ok = ok; f.__p = p; oyentes.push(f); f(); return ok; },
+        off: (ev, ok) => { for (let i = oyentes.length - 1; i >= 0; i--) if (oyentes[i].__p === p && (!ok || oyentes[i].__ok === ok)) oyentes.splice(i, 1); },
+        set: async v => { escribir(p, v); avisar(); },
+        update: async o => { Object.entries(o || {}).forEach(([k, v]) => escribir(partes(p).concat(partes(k)).join('/'), v)); avisar(); },
+        remove: async () => { escribir(p, null); avisar(); },
+        push: v => { const k = nuevoId(); const c = ref(partes(p).concat([k]).join('/')); if (v !== undefined) { escribir(c.path, v); avisar(); } const pr = Promise.resolve(c); c.then = pr.then.bind(pr); c.catch = pr.catch.bind(pr); return c; },
+        transaction: async f => { const v = f(leer(p)); if (v !== undefined) { escribir(p, v); avisar(); } return { committed: true, snapshot: snap(p, leer(p)) }; },
+        orderByChild: c => ref(p, Object.assign({}, q, { campo: c })), orderByKey: () => ref(p, Object.assign({}, q, { campo: '$key' })),
+        orderByValue: () => ref(p, Object.assign({}, q, { campo: '$value' })),
+        equalTo: v => ref(p, Object.assign({}, q, { igual: v })), startAt: v => ref(p, Object.assign({}, q, { desde: v })), endAt: v => ref(p, Object.assign({}, q, { hasta: v })),
+        limitToFirst: n => ref(p, Object.assign({}, q, { lim: n })), limitToLast: n => ref(p, Object.assign({}, q, { lim: -n })),
+        onDisconnect: () => ({ remove: async () => {}, set: async () => {}, update: async () => {}, cancel: async () => {} }),
+        toString: () => 'demo://' + p
+      };
+      return r;
+    }
+    return { ref: p => ref(p || ''), refFromURL: u => ref(''), goOnline() {}, goOffline() {}, _raiz: raiz };
+  }
+
+  /* ── Auth de mentira ── */
+  function MockAuth(usuario) {
+    const u = Object.assign({ uid: 'demo', email: 'demo@demo.local', displayName: 'Demostración', getIdToken: async () => 'demo', getIdTokenResult: async () => ({ claims: {} }) }, usuario || {});
+    return { currentUser: u, onAuthStateChanged: f => { setTimeout(() => f(u), 0); return () => {}; }, signOut: async () => location.reload(), signInWithEmailAndPassword: async () => ({ user: u }), setPersistence: async () => {} };
+  }
+
+  /* ── Banner y guía explicativa ── */
+  const CSS = `
+  .dmo-banda{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:#111827;color:#fff;font:600 13px/1.3 system-ui,-apple-system,'Segoe UI',sans-serif;padding:8px 10px 8px 14px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:calc(100vw - 20px)}
+  .dmo-banda b{color:#FDE68A}.dmo-banda button{all:unset;cursor:pointer;background:#FDE68A;color:#111827;padding:6px 12px;border-radius:999px;font-weight:700}
+  .dmo-banda button.dmo-salir{background:#374151;color:#fff}
+  button.dmo-q.dmo-q,.dmo-q{all:unset;box-sizing:border-box;display:inline-grid;place-items:center;width:22px;height:22px;margin:0 6px;border-radius:50%;background:#F59E0B;color:#fff;
+    font:800 13px/1 system-ui,sans-serif;cursor:pointer;vertical-align:middle;box-shadow:0 0 0 3px rgba(245,158,11,.25);animation:dmoLate 2.4s ease-in-out infinite;flex:none}
+  .dmo-q:hover{background:#D97706}@keyframes dmoLate{0%,100%{box-shadow:0 0 0 3px rgba(245,158,11,.25)}50%{box-shadow:0 0 0 7px rgba(245,158,11,.08)}}
+  .dmo-pop{position:fixed;z-index:2147483001;max-width:min(380px,calc(100vw - 24px));background:#fff;color:#1f2937;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.28);
+    padding:14px 16px 12px;font:14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;border-top:5px solid #F59E0B}
+  .dmo-pop h4{margin:0 0 6px;font-size:15px}.dmo-pop p{margin:0 0 8px}.dmo-pop .dmo-como{background:#FFFBEB;border-radius:8px;padding:8px 10px;font-size:13px}
+  .dmo-pop .dmo-x{all:unset;cursor:pointer;position:absolute;right:10px;top:8px;font-size:18px;color:#6B7280}
+  .dmo-panel{position:fixed;right:14px;bottom:70px;z-index:2147483001;width:min(360px,calc(100vw - 28px));max-height:min(70vh,560px);overflow:auto;background:#fff;color:#1f2937;
+    border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}
+  .dmo-panel header{position:sticky;top:0;background:#111827;color:#fff;padding:12px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  .dmo-panel header button{all:unset;cursor:pointer;font-size:18px}
+  .dmo-panel .dmo-int{padding:10px 14px;background:#FFFBEB;font-size:13px}
+  .dmo-panel ol{margin:0;padding:6px 8px 10px 8px;list-style:none;counter-reset:d}
+  .dmo-panel li{counter-increment:d}.dmo-panel li button{all:unset;box-sizing:border-box;display:flex;gap:10px;width:100%;padding:9px 8px;border-radius:10px;cursor:pointer}
+  .dmo-panel li button:hover{background:#F3F4F6}.dmo-panel li button::before{content:counter(d);flex:none;width:22px;height:22px;border-radius:50%;background:#F59E0B;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+  .dmo-panel li small{display:block;color:#6B7280}
+  .dmo-foco{outline:3px solid #F59E0B!important;outline-offset:4px!important;border-radius:8px;transition:outline-color .3s}
+  @media print{.dmo-banda,.dmo-q,.dmo-pop,.dmo-panel{display:none!important}}`;
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let pop = null, panel = null, ITEMS = [];
+  function cerrarPop() { if (pop) { pop.remove(); pop = null; } document.querySelectorAll('.dmo-foco').forEach(e => e.classList.remove('dmo-foco')); }
+  function mostrar(it, ancla) {
+    cerrarPop();
+    pop = document.createElement('div'); pop.className = 'dmo-pop'; pop.setAttribute('role', 'dialog');
+    pop.innerHTML = '<button class="dmo-x" aria-label="Cerrar">×</button><h4>' + esc(it.titulo) + '</h4><p>' + it.texto + '</p>' + (it.como ? '<div class="dmo-como"><b>Cómo se hace:</b> ' + it.como + '</div>' : '');
+    document.body.appendChild(pop);
+    pop.querySelector('.dmo-x').onclick = cerrarPop;
+    const r = ancla ? ancla.getBoundingClientRect() : null, w = pop.offsetWidth, h = pop.offsetHeight;
+    let x = r ? r.left : (innerWidth - w) / 2, y = r ? r.bottom + 8 : (innerHeight - h) / 2;
+    if (y + h > innerHeight - 10) y = Math.max(10, (r ? r.top : innerHeight) - h - 8);
+    x = Math.max(10, Math.min(x, innerWidth - w - 10));
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  }
+  function visible(el) { return el && el.offsetParent !== null && el.getClientRects().length; }
+  function poner() {
+    ITEMS.forEach((it, i) => {
+      document.querySelectorAll(it.sel).forEach(el => {
+        if (it.contiene && !(el.textContent || '').includes(it.contiene)) return;
+        if (el.dataset.dmo === String(i) || el.querySelector(':scope > .dmo-q[data-i="' + i + '"]')) return;
+        el.dataset.dmo = String(i);
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'dmo-q'; b.dataset.i = i; b.textContent = '?'; b.title = 'Qué es esto: ' + it.titulo;
+        b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); mostrar(it, b); });
+        if (it.donde === 'antes') el.parentNode.insertBefore(b, el); else if (it.donde === 'despues') el.after(b); else el.appendChild(b);
+      });
+    });
+  }
+  function abrirPanel() {
+    if (panel) { panel.remove(); panel = null; return; }
+    panel = document.createElement('div'); panel.className = 'dmo-panel';
+    panel.innerHTML = '<header>📘 Guía de la demostración<button aria-label="Cerrar">×</button></header><div class="dmo-int">' + (window.__DEMO_INTRO || 'Pulsa los círculos <b>?</b> que verás junto a cada apartado, o elige uno aquí.') + '</div><ol>' +
+      ITEMS.map((it, i) => '<li><button data-i="' + i + '"><span><b>' + esc(it.titulo) + '</b>' + (it.donde_txt ? '<small>' + esc(it.donde_txt) + '</small>' : '') + '</span></button></li>').join('') + '</ol>';
+    document.body.appendChild(panel);
+    panel.querySelector('header button').onclick = abrirPanel;
+    panel.addEventListener('click', e => {
+      const b = e.target.closest('li button'); if (!b) return; const it = ITEMS[+b.dataset.i];
+      if (innerWidth < 1500) abrirPanel();
+      if (it.ir) { try { it.ir(); } catch (er) {} }
+      setTimeout(() => {
+        const el = [...document.querySelectorAll(it.sel)].find(e => visible(e) && (!it.contiene || (e.textContent || '').includes(it.contiene)));
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('dmo-foco'); setTimeout(() => mostrar(it, el.querySelector('.dmo-q') || el), 450); }
+        else mostrar(it, null);
+      }, it.ir ? 500 : 0);
+    });
+  }
+  window.DEMO = {
+    activo: false, MockFS, MockRTDB, MockAuth,
+    iniciar(opciones) {
+      this.activo = true; window._demo = true; ITEMS = opciones.guia || []; window.__DEMO_INTRO = opciones.intro;
+      const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
+      const bn = document.createElement('div'); bn.className = 'dmo-banda';
+      bn.innerHTML = '<span>🧪 <b>Modo demostración</b> · datos inventados · no se guarda nada</span><button type="button" class="dmo-guia">📘 Guía</button><button type="button" class="dmo-salir">Salir</button>';
+      document.body.appendChild(bn);
+      bn.querySelector('.dmo-guia').onclick = abrirPanel;
+      bn.querySelector('.dmo-salir').onclick = () => { location.href = location.pathname; };
+      document.addEventListener('click', e => { if (pop && !pop.contains(e.target) && !e.target.closest('.dmo-q')) cerrarPop(); });
+      new MutationObserver(() => { clearTimeout(this._t); this._t = setTimeout(poner, 120); }).observe(document.body, { childList: true, subtree: true });
+      poner(); setTimeout(abrirPanel, 900);
+    },
+    boton(texto) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'dmo-entrar';
+      b.textContent = texto || '🧪 Ver una demostración con datos de ejemplo';
+      b.style.cssText = 'display:block;width:100%;margin:12px 0 0;padding:12px 14px;border-radius:12px;border:2px dashed #F59E0B;background:#FFFBEB;color:#92400E;font:700 15px system-ui,sans-serif;cursor:pointer';
+      return b;
+    }
+  };
+})();
+
+</script>
+<script>
+/* Modo demostración de Programas del cole (parte 1: antes de app.js).
+   Con ?demo la app usa una base de datos en memoria con datos inventados:
+   no se conecta a Firebase ni se guarda nada. */
+(function () {
+  if (!/[?&]demo\b/.test(location.search)) return;
+  window._demo = true;
+  const mem = {};
+  try {
+    Storage.prototype.getItem = function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; };
+    Storage.prototype.setItem = function (k, v) { mem[k] = String(v); };
+    Storage.prototype.removeItem = function (k) { delete mem[k]; };
+  } catch (e) { }
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const HOY = iso(new Date());
+  const Y = (() => { const d = new Date(); return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; })();
+  const CUR = Y + '-' + String(Y + 1).slice(2);
+  // Días lectivos aproximados (sin fines de semana ni festivos nacionales)
+  const FEST = [Y + '-10-12', Y + '-11-02', Y + '-12-07', Y + '-12-08'];
+  function dias(desde, hasta, semana) {
+    const r = []; const d = new Date(desde + 'T12:00');
+    for (; iso(d) <= hasta; d.setDate(d.getDate() + 1)) { const f = iso(d), w = d.getDay(); if (w > 0 && w < 6 && !FEST.includes(f) && (!semana || semana.includes(w))) r.push(f); }
+    return r;
+  }
+  let semillaN = 7;
+  const azar = () => { semillaN = (semillaN * 9301 + 49297) % 233280; return semillaN / 233280; };
+
+  function semilla() {
+    const SIG = ['A.R.M.', 'B.C.L.', 'C.F.S.', 'D.G.P.', 'E.H.R.', 'F.J.T.', 'G.L.A.', 'H.M.B.', 'I.N.C.', 'J.O.D.', 'K.P.E.', 'L.Q.F.', 'M.R.G.', 'N.S.H.', 'O.T.I.', 'P.U.J.', 'Q.V.K.', 'R.W.L.', 'S.X.M.', 'T.Y.N.'];
+    let si = 0;
+    const base = { act: 'AE', hi: '16:00', hf: '18:00', horasSesion: 2, inicio: Y + '-10-13' };
+    const G = {
+      g3: { nombre: 'Tercero', dias: [1, 3], mod: 'A', docente: 'Monitora A (ejemplo)', horario: 'Lunes y miércoles 16:00–18:00', curso: '3º' },
+      g4: { nombre: 'Cuarto', dias: [2, 4], mod: 'A', docente: 'Monitora B (ejemplo)', horario: 'Martes y jueves 16:00–18:00', curso: '4º' },
+      g5: { nombre: 'Quinto', dias: [2, 4], mod: 'A', docente: 'Monitora A (ejemplo)', horario: 'Martes y jueves 16:00–18:00', curso: '5º' },
+      g6: { nombre: 'Sexto', dias: [2, 4], mod: 'B', docente: 'Profesor C (ejemplo)', horario: 'Martes y jueves 16:00–18:00', curso: '6º' }
+    };
+    const grupos = {}, sesiones = {}, informes = {};
+    Object.entries(G).forEach(([gid, g]) => {
+      const al = {};
+      for (let i = 0; i < 5; i++) al[gid + 'a' + i] = { siglas: SIG[si++ % SIG.length], curso: g.curso, tutor: 'Tutor/a de ' + g.curso };
+      const x = Object.assign({}, base, g); delete x.curso; x.alumnos = al; grupos[gid] = x;
+      sesiones[gid] = {}; informes[gid] = { _asis: {} };
+      const ses = dias(Y + '-10-13', HOY, g.dias).filter(f => f < HOY);
+      [...new Set(ses.map(f => f.slice(0, 7)))].forEach(mes => {
+        const doc = ses.filter(f => f.startsWith(mes)).map(f => +f.slice(8)), alu = {};
+        Object.keys(al).forEach(a => alu[a] = doc.filter(() => azar() < .85));
+        informes[gid]._asis[mes] = { doc, alu, por: 'demo', ts: Date.now() };
+      });
+      dias(Y + '-10-13', HOY, g.dias).filter(f => f < HOY).forEach((f, n) => {
+        const asist = {}; Object.keys(al).forEach(a => { const r = azar(); asist[a] = r < .82 ? 'P' : r < .93 ? 'F' : 'J'; });
+        sesiones[gid][f] = { impartida: n !== 3, horas: n !== 3 ? 2 : 0, asist: n !== 3 ? asist : {}, obs: n === 1 ? 'Se trabaja la lectura comprensiva con textos cortos.' : (n === 3 ? 'No impartida: excursión del centro.' : '') };
+      });
+    });
+    const hechos = {};
+    (window.PLAZOS || []).forEach((p, i) => {
+      if (!p.s) return;
+      const y = p.m >= 9 ? Y : Y + 1, fin = y + '-' + pad(p.m) + '-' + pad(Math.min(p.e || p.s, 28));
+      if (fin < HOY && i % 6) hechos[p.id] = { por: 'demo', fecha: fin };
+    });
+    const ev = (f, t, part) => ({ fecha: f, texto: t, part: part || '', por: 'demo' });
+    const palancas = {
+      A101: { estado: 'hecha', evid: { e1: ev(Y + '-10-06', 'Claustro de análisis de barreras: absentismo, lectura y convivencia.', 'Claustro') } },
+      A413: { estado: 'marcha', evid: { e1: ev(Y + '-10-20', '«Leer cada día»: 20 minutos de lectura diaria en todas las clases.', '1.º a 6.º'), e2: ev(Y + '-11-10', 'Primer registro de velocidad lectora del curso.', 'Tutorías') } },
+      A414: { estado: 'marcha', evid: { e1: ev(Y + '-11-04', 'Taller de expresión oral con familias.', '18 familias') } },
+      A209: { estado: 'marcha' },
+      A501: { estado: 'marcha', evid: { e1: ev(Y + '-10-27', 'Patios dinámicos con juegos cooperativos.', 'Alumnado de 3.º a 6.º') } }
+    };
+    const eco = {
+      dotacion: 18000, ingreso: Y + '-10-15',
+      gastos: {
+        x1: { concepto: 'Lotes de libros de lectura para las aulas', fecha: Y + '-10-22', tipo: 'fung', pal: 'A413', proveedor: 'Librería de ejemplo', factura: 'F-0142', base: 1239.67, iva: 21, total: 1500, pagado: Y + '-10-30', seneca: 1 },
+        x2: { concepto: 'Taller de convivencia (empresa de ejemplo)', fecha: Y + '-11-06', tipo: 'serv', pal: 'A501', proveedor: 'Talleres Ejemplo S.L.', factura: '2026/88', base: 991.74, iva: 21, total: 1200, pagado: '', seneca: '' },
+        x3: { concepto: 'Material manipulativo de matemáticas', fecha: Y + '-11-12', tipo: 'fung', pal: 'A209', proveedor: 'Material Escolar Demo', factura: 'MD-77', base: 520.66, iva: 21, total: 630, pagado: Y + '-11-14', seneca: '' }
+      },
+      contratos: { c1: { empresa: 'Talleres Ejemplo S.L.', importe: 4800, objeto: 'Talleres de convivencia y patios dinámicos', fecha: Y + '-10-29', docs: { d0: true, d1: true, d2: true } } }
+    };
+    const usoAlumnos = (n, curso0) => { const r = {}; for (let i = 0; i < n; i++) r['u' + i] = { siglas: SIG[(i * 3 + 1) % SIG.length], curso: (1 + (i + curso0) % 6) + 'º' }; return r; };
+    const ACo = usoAlumnos(12, 0), AMa = usoAlumnos(6, 2), diasCo = {}, diasMa = {};
+    dias(HOY.slice(0, 7) + '-01', HOY).filter(f => f < HOY).forEach(f => {
+      const c = { _ok: true }; Object.keys(ACo).forEach(a => { if (azar() < .9) c[a] = true; }); diasCo[f] = c;
+      const m = { _ok: true }; Object.keys(AMa).forEach(a => { if (azar() < .85) m[a] = true; }); diasMa[f] = m;
+    });
+    const reuniones = {};
+    // Nombres completos inventados (la app los guarda solo en el dispositivo)
+    const NOM = ['Ana', 'Bruno', 'Carla', 'David', 'Elena', 'Fran', 'Gala', 'Hugo', 'Inés', 'Javi', 'Lola', 'Mario', 'Nora', 'Óscar', 'Paula', 'Raúl', 'Sara', 'Teo', 'Vera', 'Yago'];
+    const APE = ['Alba Ruiz', 'Benítez Cano', 'Campos Fuentes', 'Díaz Gil', 'Esteban Haro', 'Flores Jaén', 'García Luna', 'Herrera Molina', 'Iglesias Nieto', 'Jiménez Ortega', 'Lara Pino', 'Marín Quero'];
+    let ni = 0; const nombre = () => { const n = APE[ni % APE.length] + ', ' + NOM[(ni * 7) % NOM.length]; ni++; return n; };
+    Object.entries(grupos).forEach(([gid, g]) => { const o = {}; Object.keys(g.alumnos).forEach(a => o[a] = nombre()); mem['programas-nombres-' + gid] = JSON.stringify(o); });
+    [['comedor', ACo], ['matinal', AMa]].forEach(([k, A]) => { const o = {}; Object.keys(A).forEach(a => o[a] = nombre()); mem['programas-nombres-apertura-' + k] = JSON.stringify(o); });
+    return {
+      '.info': { connected: true },
+      programas: { cursos: { [CUR]: { hechos, grupos, sesiones, reuniones, palancas, retos: {}, informes, cotejo: {}, eco, pem: {}, apertura: { comedor: { alumnos: ACo, dias: diasCo }, matinal: { alumnos: AMa, dias: diasMa } } } } }
+    };
+  }
+  const auth = window.DEMO.MockAuth({ email: 'demo@capitulaciones.local' });
+  const falso = {
+    initializeApp: () => ({ name: 'programas', database: () => (falso._db = falso._db || window.DEMO.MockRTDB(semilla())), auth: () => auth }),
+    auth: Object.assign(() => auth, { Auth: { Persistence: { LOCAL: 'local', SESSION: 'session' } } }),
+    apps: []
+  };
+  if (window.firebase) { window.firebase.initializeApp = falso.initializeApp; try { window.firebase.auth = falso.auth; } catch (e) { } }
+  else window.firebase = falso;
+})();
+
+</script>
+<!-- /DEMO-PRE -->
 <script src="app.js"></script>
 <script src="app2.js"></script>
 <script src="app3.js"></script>
@@ -231,5 +566,43 @@ body.soloapt #nav button[data-s=acomp]{display:none}
 <script src="app13.js"></script>
 <script src="app14.js"></script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+<!-- DEMO -->
+<script>
+/* Modo demostración de Programas del cole (parte 2: entrar y guía). */
+(function () {
+  const ES_DEMO = /[?&]demo\b/.test(location.search);
+  function ponerBoton() {
+    const ok = document.getElementById('accError'); if (!ok || document.querySelector('.dmo-entrar')) return;
+    const b = window.DEMO.boton(); b.onclick = () => { location.search = '?demo'; }; ok.after(b);
+  }
+  if (!ES_DEMO) { ponerBoton(); return; }
+  PERFILES.demo = { nombre: 'Dirección (demostración)', emoji: '🧪', idea: '', rol: 'Dirección', prog: ['ZTS', 'PROA', 'PROA+', 'APT'], apertura: true };
+  try { urlSala = () => location.pathname + '?demo#la-sala-no-funciona-en-la-demo'; } catch (e) { }
+  abrir('demo');
+  // Reuniones del curso ya previstas, como si se hubieran cargado con el botón
+  setTimeout(async () => {
+    try { await cargarReunionesPrevistas(); } catch (e) { }
+    // Las que ya han pasado, como celebradas
+    setTimeout(() => { Object.entries(D.reuniones || {}).forEach(([k, r]) => { if (r.prevista && r.fecha < hoyIso()) guardar('reuniones/' + k + '/prevista', null); }); render(); }, 300);
+  }, 900);
+  const nav = s => '#nav button[data-s="' + s + '"]';
+  window.DEMO.iniciar({
+    intro: 'Estás dentro de Programas del cole como <b>dirección</b>, con un colegio inventado: 4 grupos de acompañamiento de tarde, el PROA+ con sus palancas y gastos, y el comedor y el aula matinal. Toca lo que quieras: <b>no se guarda nada</b>. Pulsa los <b>?</b> para saber qué hace cada apartado.',
+    guia: [
+      { sel: nav('panel'), ir: () => irA('panel'), titulo: 'Panel', texto: 'El resumen de cada programa (PROA Andalucía, PROA+ y ZTS): lo vencido, lo de las próximas semanas, sesiones y horas del mes y palancas en marcha.', como: 'Es la pantalla de inicio. Toca un plazo para ir a él.' },
+      { sel: nav('plazos'), ir: () => irA('plazos'), titulo: 'Plazos', texto: 'Todo lo que hay que hacer en Séneca durante el curso para cada programa, con la fecha, quién lo hace y la ruta exacta en Séneca.', como: 'Marca la casilla cuando esté hecho. En rojo lo vencido; en naranja lo de las próximas dos semanas.' },
+      { sel: nav('acomp'), ir: () => irA('acomp'), titulo: 'Acompañamiento (PROA Andalucía)', texto: 'Los grupos de tarde: alumnado (solo siglas), lista de cada sesión, horas impartidas y euros del mes, informes trimestrales (Anexo XV) y la lista de cotejo de la documentación.', como: 'Elige el grupo arriba. En «Sesiones» eliges el día y marcas P (presente), F (falta) o J (justificada). Las monitoras entran con su usuario y solo ven su grupo.' },
+      { sel: nav('reuniones'), ir: () => irA('reuniones'), titulo: 'Reuniones', texto: 'Las quincenales monitor/a–tutor/a, citas con familias, comisiones de seguimiento del PROA+ y coordinaciones ZTS, con orden del día y acuerdos.', como: 'Ya vienen previstas las del curso. Pulsa <b>✏️ Editar</b> para escribir los acuerdos o <b>🎥 Reunión telemática</b> para hacerla a distancia (en la demo la sala no se abre).' },
+      { sel: nav('palancas'), ir: () => irA('palancas'), titulo: 'PROA+ · actividades palanca', texto: 'Las 10 actividades palanca del plan, su estado (en marcha o completada) y las evidencias con fecha y participantes, más los retos del plan.', como: 'Cambia el estado en el desplegable y añade evidencias con <b>＋</b>. Todo sale después en la memoria.' },
+      { sel: nav('eco'), ir: () => irA('eco'), titulo: 'PROA+ · gestión económica', texto: 'La dotación, cada factura (base, IVA, palanca a la que se imputa, si está pagada y subida a Séneca) y los contratos con empresas con su documentación.', como: 'Pulsa <b>＋ Nuevo gasto</b>. El saldo restante se calcula solo y avisa si una palanca se queda sin dinero.' },
+      { sel: nav('memorias'), ir: () => irA('memorias'), titulo: 'Memorias', texto: 'Las memorias de fin de curso de cada programa, montadas con lo que ya se ha ido apuntando: sesiones, asistencia, reuniones, evidencias y gastos.', como: 'Revisa los textos, completa lo que falte y descarga el documento.' },
+      { sel: nav('apertura'), ir: () => irA('apertura'), titulo: 'Plan de Apertura', texto: 'Comedor y aula matinal: la monitora pasa lista cada día y la app prepara el resumen del mes para grabar los usos en Séneca.', como: 'Elige el servicio y el día y toca a cada alumno/a. En el comedor se marca quién <b>no</b> come; en el aula matinal, quién viene.' },
+      { sel: '#selCurso', donde: 'despues', titulo: 'Curso académico', texto: 'Cada curso escolar se guarda por separado. En septiembre se cambia aquí y el curso anterior sigue disponible.' }
+    ]
+  });
+})();
+
+</script>
+<!-- /DEMO -->
 </body>
 </html>
