@@ -84,9 +84,13 @@ function dlgPegarTodo() {
     $('dlg').close(); toast(n + ' añadidos' + (y ? ', ' + y + ' ya estaban' : '')); render();
   };
 }
+// Instrucciones PROA 2026/27, Anexo III.7: grupos de entre 5 y 15 alumnos/as
+const PROA_MIN = 5, PROA_MAX = 15;
 function avisoTam(n) {
-  if (!n || n >= 8) return '';
-  return '<div class="aviso" style="margin-top:6px">⚠️ Este grupo tiene <b>' + n + '</b> alumnos/as: falta' + (8 - n > 1 ? 'n ' : ' ') + (8 - n) + ' para llegar al mínimo de 8.</div>';
+  if (!n) return '';
+  if (n < PROA_MIN) return '<div class="aviso" style="margin-top:6px">⚠️ Este grupo tiene <b>' + n + '</b> alumnos/as: falta' + (PROA_MIN - n > 1 ? 'n ' : ' ') + (PROA_MIN - n) + ' para llegar al mínimo de ' + PROA_MIN + '. Sin el mínimo, el grupo no puede funcionar (salvo autorización de la Dirección General).</div>';
+  if (n > PROA_MAX) return '<div class="aviso" style="margin-top:6px">⚠️ Este grupo tiene <b>' + n + '</b> alumnos/as: sobra' + (n - PROA_MAX > 1 ? 'n ' : ' ') + (n - PROA_MAX) + ' para el máximo de ' + PROA_MAX + '.</div>';
+  return '';
 }
 // Copia de seguridad de los nombres (para pasarlos a otro dispositivo sin subirlos a la nube)
 function exportarNombres() {
