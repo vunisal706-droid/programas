@@ -14,15 +14,15 @@ function hojaConFirmas(gid, mes, R) {
 
 // Trazo de bolígrafo: tinta azul, curvas suaves y grosor que cambia con la velocidad y la presión
 function trazoBoli(cv) {
-  const cx = cv.getContext('2d'); let pts = [], hay = false, ancho = 2.2;
-  cx.lineCap = 'round'; cx.lineJoin = 'round'; cx.strokeStyle = 'rgba(20,35,140,.92)';
+  const cx = cv.getContext('2d'); let pts = [], hay = false, ancho = 3.4;
+  cx.lineCap = 'round'; cx.lineJoin = 'round'; cx.strokeStyle = 'rgb(20,45,160)';
   const pos = e => { const b = cv.getBoundingClientRect(); return { x: (e.clientX - b.left) * cv.width / b.width, y: (e.clientY - b.top) * cv.height / b.height, t: performance.now(), p: e.pressure || .5 }; };
-  cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); pts = [pos(e)]; hay = true; ancho = 2.2; e.preventDefault(); };
+  cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); pts = [pos(e)]; hay = true; ancho = 3.4; e.preventDefault(); };
   cv.onpointermove = e => {
     if (!pts.length) return; e.preventDefault();
     const p = pos(e), a = pts[pts.length - 1], d = Math.hypot(p.x - a.x, p.y - a.y); if (d < 1.2) return;
     const v = d / Math.max(1, p.t - a.t), presion = e.pointerType === 'pen' ? .6 + p.p : 1;
-    const objetivo = Math.max(1.1, Math.min(3.4, (3.2 - v * 1.1) * presion));
+    const objetivo = Math.max(2.4, Math.min(5, (4.8 - v * 1.3) * presion));
     ancho = ancho * .7 + objetivo * .3;
     pts.push(p);
     if (pts.length >= 3) {
@@ -30,7 +30,7 @@ function trazoBoli(cv) {
       cx.lineWidth = ancho; cx.beginPath(); cx.moveTo(m1.x, m1.y); cx.quadraticCurveTo(p1.x, p1.y, m2.x, m2.y); cx.stroke();
     } else { cx.lineWidth = ancho; cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(p.x, p.y); cx.stroke(); }
   };
-  cv.onpointerup = cv.onpointercancel = () => { if (pts.length === 1) { cx.fillStyle = cx.strokeStyle; cx.beginPath(); cx.arc(pts[0].x, pts[0].y, 1.4, 0, 7); cx.fill(); } pts = []; };
+  cv.onpointerup = cv.onpointercancel = () => { if (pts.length === 1) { cx.fillStyle = cx.strokeStyle; cx.beginPath(); cx.arc(pts[0].x, pts[0].y, 2.2, 0, 7); cx.fill(); } pts = []; };
   return { hay: () => hay, borrar: () => { cx.clearRect(0, 0, cv.width, cv.height); hay = false; } };
 }
 // Recorta los bordes vacíos y reduce la firma para guardarla
