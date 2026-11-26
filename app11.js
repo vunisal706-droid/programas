@@ -67,8 +67,28 @@
     d.body.style.background = '#fff';
     await Promise.race([d.fonts ? d.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 3000))]);
     await Promise.all([...d.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 4000); })));
+    // html2canvas pinta en un lienzo de esta ventana: la letra de los anexos tiene que estar cargada aquí también;
+    // si no, dibuja con otra más ancha y las palabras salen pegadas. Sin conexión, se usa Arial en los dos sitios.
+    if (!(await fuenteAnexos())) { const st = d.createElement('style'); st.textContent = 'body,body *{font-family:Arial,Helvetica,sans-serif!important}'; d.head.appendChild(st); }
     await new Promise(r => setTimeout(r, 150));
     return fr;
+  }
+  let _fuente = null;
+  function fuenteAnexos() {
+    if (_fuente) return _fuente;
+    return (_fuente = (async () => {
+      if (!document.fonts) return false;
+      const F = '"Source Sans 3"', ok = () => document.fonts.check('400 14px ' + F) && document.fonts.check('700 14px ' + F);
+      if (ok()) return true;
+      let l = document.getElementById('fuenteAnexos');
+      if (!l) {
+        l = document.createElement('link'); l.id = 'fuenteAnexos'; l.rel = 'stylesheet';
+        l.href = 'https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,700;1,700&display=swap';
+        const cargada = new Promise(r => { l.onload = r; l.onerror = r; }); document.head.appendChild(l); await Promise.race([cargada, new Promise(r => setTimeout(r, 4000))]);
+      }
+      await Promise.race([Promise.all(['400', '700', 'italic 700'].map(w => document.fonts.load(w + ' 14px ' + F).catch(() => 0))), new Promise(r => setTimeout(r, 4000))]);
+      const r = ok(); if (!r) _fuente = null; return r;
+    })());
   }
 
   // Convierte las hojas (.pag) del marco en páginas A4 del PDF, con los logos en todas las hojas
@@ -100,6 +120,26 @@
         pdf.addImage(pc.toDataURL('image/jpeg', .9), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
         y = fin; n++;
       }
+    }
+  }
+
+  // Anexos X y XII: cada anexo SIEMPRE en una sola hoja A4; si no cabe, se reduce entero hasta que quepa
+  async function hojaUnica(fr, pdf, primera) {
+    const d = fr.contentDocument, S = 2;
+    let nueva = !primera;
+    for (const pag of d.querySelectorAll('.pag')) {
+      pag.style.margin = '0'; pag.style.boxShadow = 'none'; pag.style.minHeight = '0';
+      const cv = await html2canvas(pag, { scale: S, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      const pxmm = cv.width / 210, altoPag = Math.round(297 * pxmm), mBot = 12 * pxmm;
+      const datos = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let fin = cv.height - 1;
+      busca: for (; fin > 0; fin -= 2) { const o = fin * cv.width * 4; for (let x = 0; x < cv.width; x += 3) { const i = o + x * 4; if (datos[i] < 238 || datos[i + 1] < 238 || datos[i + 2] < 238) break busca; } }
+      const alto = Math.min(cv.height, fin + mBot), k = Math.min(1, altoPag / alto), w = cv.width * k;
+      const pc = document.createElement('canvas'); pc.width = cv.width; pc.height = altoPag;
+      const g = pc.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, pc.width, pc.height);
+      g.drawImage(cv, 0, 0, cv.width, alto, (cv.width - w) / 2, 0, w, alto * k);
+      if (nueva) pdf.addPage(); nueva = true;
+      pdf.addImage(pc.toDataURL('image/jpeg', .9), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
     }
   }
 
@@ -146,7 +186,7 @@
   window.anexosAPdf = async function (fns) {
     for (const s of LIBS.slice(0, 2)) await cargarScript(s);
     const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true }); let primera = true;
-    for (const fn of fns) { const fr = await capturar(fn); if (!fr) continue; try { await hojasAPdf(fr, pdf, primera); primera = false; } finally { fr.remove(); } }
+    for (const fn of fns) { const fr = await capturar(fn); if (!fr) continue; try { await hojaUnica(fr, pdf, primera); primera = false; } finally { fr.remove(); } }
     return primera ? null : pdf.output('blob');
   };
 })();
