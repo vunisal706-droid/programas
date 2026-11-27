@@ -66,7 +66,8 @@ const _rSesiones9 = rSesiones; rSesiones = (g, selMes) => rAsistencia(g, selMes)
 
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-copiar9]');
-  if (c) { const t = c.dataset.copiar9 === '__MARC__' ? codigoMarcAsis() : c.dataset.copiar9, msg = c.dataset.msg; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(msg || (t.startsWith('javascript:') ? 'Código copiado' : 'Copiado: ' + t))).catch(() => toast('No se pudo copiar: selecciona y copia ' + t, 'err')); return; }
+  if (c) { const t = c.dataset.copiar9 === '__MARC__' ? codigoMarcAsis() : c.dataset.copiar9, msg = c.dataset.msg;
+    if (!t.trim()) { toast('No hay días del alumnado guardados este mes en este grupo. Pulsa ✏️ Editar, marca los días y pulsa «Guardar asistencia».', 'err'); return; } (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(msg || (t.startsWith('javascript:') ? 'Código copiado' : 'Copiado: ' + t))).catch(() => toast('No se pudo copiar: selecciona y copia ' + t, 'err')); return; }
   const b = e.target.closest('[data-acc9]'); if (!b) return;
   ({ todo: asisTodo, editar: asisEditar }[b.dataset.acc9] || (() => { }))(b.dataset.gid);
 });
