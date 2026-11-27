@@ -1,7 +1,7 @@
 // ─── Asistencia del mes en formato Séneca (días separados por comas, sin espacios) ───
 // Nube: informes/<grupo>/_asis/<aaaa-mm> = { doc: [días], alu: { aid: [días] }, por, ts }  (solo ids y números de día, sin nombres)
 const asisDe = (gid, mes) => ((((D.informes || {})[gid] || {})._asis || {})[mes]) || null;
-const fmtSen = L => (L || []).slice().sort((a, b) => a - b).join(',');
+const fmtSen = L => (L || []).slice().sort((a, b) => a - b).map(d => String(d).padStart(2, '0')).join(',');   // Séneca exige dos cifras (03,05…): sin el cero da error al guardar
 const previstosHastaHoy = (g, mes) => diasPrevistos(g, mes).filter(f => f <= hoyIso()).map(f => +f.slice(8));
 PERFILES.sandra.asis = ['Tercero', 'Cuarto', 'Quinto'];   // Sandra pasa la asistencia de estos tres grupos
 const puedeAsis = g => !esMon() || g.monitor === PERFIL || ((PERFILES[PERFIL] || {}).asis || []).includes(g.nombre);
